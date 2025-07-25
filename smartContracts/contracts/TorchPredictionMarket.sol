@@ -5,15 +5,56 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
+import "./ITorchPredictionMarket.sol";
 
-contract TorchPredictionMarket is Ownable, AccessControl, ReentrancyGuard, Pausable {
+contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl, ReentrancyGuard, Pausable {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     constructor() {
         grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         grantRole(ADMIN_ROLE, msg.sender);
     }
 
+
+
+        // Fee constants
+    uint256 constant FEE_BPS = 50; // 0.5% in basis points (bps)
+    uint256 constant BPS_DENOMINATOR = 10000;
+    
+    // Bet validation constants
+    uint256 constant MIN_BET_AMOUNT = 0.1 ether; // Minimum bet amount
+    uint256 constant MAX_PRICE_RANGE = 1000; // Maximum price range in basis points
+    
+    // Scoring constants
+    uint256 constant SHARPNESS_BASE = 1000; // Base for sharpness calculation
+    uint256 constant LEAD_TIME_BASE = 1000; // Base for lead time calculation
+    uint256 constant QUALITY_DENOMINATOR = 10000; // Denominator for quality calculations
+} 
+
     mapping(address => uint256) public balances;
+
+        uint256 public betCount;
+    mapping(uint256 => Bet) public bets;
+
+    // Phase 4: Scoring & Rewards
+    uint256 public protocolFees; // Accumulated fees for admin
+
+    // Daily pools tracking
+    mapping(uint256 => uint256) public dailyPoolTotal; // day => total pool amount
+    mapping(uint256 => uint256) public dailyPoolQuality; // day => total quality-weighted amount
+    mapping(uint256 => mapping(uint256 => bool)) public dailyBetProcessed; // day => betId => processed
+
+    // Phase 5: UX, Security & Polish
+    // Leaderboard tracking
+    mapping(address => LeaderboardEntry) public leaderboard;
+    address[] public topWinners; // Top 10 winners by net payout
+    
+    // Bet history tracking
+    mapping(address => uint256[]) public userBets; // user => array of bet IDs
+    mapping(address => uint256) public userBetCount; // user => number of bets placed
+
+    // Resolved prices mapping: targetTimestamp => resolvedPrice
+    mapping(uint256 => uint256) public resolvedPrices;
+    mapping(uint256 => bool) public isResolved;
 
     // Function to deposit Ether into this contract.
     // Call this function along with some Ether.
@@ -41,87 +82,7 @@ contract TorchPredictionMarket is Ownable, AccessControl, ReentrancyGuard, Pausa
         require(success, "Failed to send Ether");
     }
 
-    struct Bet {
-        address user;
-        uint256 targetTimestamp;
-        uint256 priceMin;
-        uint256 priceMax;
-        uint256 amount; // Amount after fee
-        uint256 fee;    // Protocol fee
-        bool settled;
-        // Phase 4: Scoring & Rewards
-        uint256 quality;        // Calculated quality score
-        uint256 sharpness;      // Sharpness multiplier
-        uint256 leadTime;       // Lead time multiplier
-        bool claimed;           // Whether payout has been claimed
-    }
 
-    uint256 public betCount;
-    mapping(uint256 => Bet) public bets;
-
-    event BetPlaced(
-        uint256 indexed betId,
-        address indexed user,
-        uint256 targetTimestamp,
-        uint256 priceMin,
-        uint256 priceMax,
-        uint256 amount,
-        uint256 fee
-    );
-
-    event BetResolved(
-        uint256 indexed betId,
-        address indexed user,
-        uint256 targetTimestamp,
-        uint256 resolvedPrice,
-        bool won,
-        uint256 payout
-    );
-
-    event PayoutClaimed(
-        uint256 indexed betId,
-        address indexed user,
-        uint256 targetTimestamp,
-        uint256 quality,
-        uint256 payout,
-        uint256 dailyPool
-    );
-
-    uint256 public constant FEE_BPS = 50; // 0.5% in basis points (bps)
-    uint256 public constant BPS_DENOMINATOR = 10000;
-    uint256 public constant MIN_BET_AMOUNT = 0.1 ether; // Minimum bet amount
-    uint256 public constant MAX_PRICE_RANGE = 1000; // Maximum price range in basis points
-    uint256 public protocolFees; // Accumulated fees for admin
-
-    // Phase 4: Scoring & Rewards
-    uint256 public constant SHARPNESS_BASE = 1000; // Base for sharpness calculation
-    uint256 public constant LEAD_TIME_BASE = 1000; // Base for lead time calculation
-    uint256 public constant QUALITY_DENOMINATOR = 10000; // Denominator for quality calculations
-    
-    // Daily pools tracking
-    mapping(uint256 => uint256) public dailyPoolTotal; // day => total pool amount
-    mapping(uint256 => uint256) public dailyPoolQuality; // day => total quality-weighted amount
-    mapping(uint256 => mapping(uint256 => bool)) public dailyBetProcessed; // day => betId => processed
-
-    // Phase 5: UX, Security & Polish
-    // Leaderboard tracking
-    struct LeaderboardEntry {
-        address user;
-        uint256 totalPayout;
-        uint256 totalBets;
-        uint256 winningBets;
-    }
-    
-    mapping(address => LeaderboardEntry) public leaderboard;
-    address[] public topWinners; // Top 10 winners by net payout
-    
-    // Bet history tracking
-    mapping(address => uint256[]) public userBets; // user => array of bet IDs
-    mapping(address => uint256) public userBetCount; // user => number of bets placed
-
-    // Resolved prices mapping: targetTimestamp => resolvedPrice
-    mapping(uint256 => uint256) public resolvedPrices;
-    mapping(uint256 => bool) public isResolved;
 
 
     function placeBet(
@@ -129,25 +90,25 @@ contract TorchPredictionMarket is Ownable, AccessControl, ReentrancyGuard, Pausa
         uint256 priceMin,
         uint256 priceMax
     ) external payable whenNotPaused nonReentrant {
-        require(msg.value >= MIN_BET_AMOUNT, "Bet amount too low");
+        require(msg.value >= TorchPredictionMarketConstants.MIN_BET_AMOUNT, "Bet amount too low");
         require(targetTimestamp > block.timestamp, "Target time must be in the future");
         require(targetTimestamp <= block.timestamp + 7 days, "Target time too far in future");
         require(priceMin < priceMax, "Invalid price range");
         require(priceMin > 0, "Price must be positive");
         
         // Validate price range is reasonable (not too wide)
-        uint256 priceRange = ((priceMax - priceMin) * BPS_DENOMINATOR) / priceMin;
-        require(priceRange <= MAX_PRICE_RANGE, "Price range too wide");
+        uint256 priceRange = ((priceMax - priceMin) * TorchPredictionMarketConstants.BPS_DENOMINATOR) / priceMin;
+        require(priceRange <= TorchPredictionMarketConstants.MAX_PRICE_RANGE, "Price range too wide");
 
         // Calculate fee and net amount
-        uint256 fee = (msg.value * FEE_BPS) / BPS_DENOMINATOR;
+        uint256 fee = (msg.value * TorchPredictionMarketConstants.FEE_BPS) / TorchPredictionMarketConstants.BPS_DENOMINATOR;
         uint256 netAmount = msg.value - fee;
         protocolFees += fee;
 
         // Phase 4: Calculate quality metrics
         uint256 sharpness = calculateSharpness(priceMin, priceMax);
         uint256 leadTime = calculateLeadTime(targetTimestamp);
-        uint256 quality = (sharpness * leadTime) / QUALITY_DENOMINATOR;
+        uint256 quality = (sharpness * leadTime) / TorchPredictionMarketConstants.QUALITY_DENOMINATOR;
 
         // Store bet
         bets[betCount] = Bet({
@@ -188,10 +149,10 @@ contract TorchPredictionMarket is Ownable, AccessControl, ReentrancyGuard, Pausa
      * @return Sharpness multiplier (higher = more precise prediction)
      */
     function calculateSharpness(uint256 priceMin, uint256 priceMax) internal pure returns (uint256) {
-        uint256 range = ((priceMax - priceMin) * SHARPNESS_BASE) / priceMin;
+        uint256 range = ((priceMax - priceMin) * TorchPredictionMarketConstants.SHARPNESS_BASE) / priceMin;
         // Inverse relationship: smaller range = higher sharpness
-        if (range == 0) return SHARPNESS_BASE;
-        return SHARPNESS_BASE / range;
+        if (range == 0) return TorchPredictionMarketConstants.SHARPNESS_BASE;
+        return TorchPredictionMarketConstants.SHARPNESS_BASE / range;
     }
 
     /**
@@ -204,10 +165,10 @@ contract TorchPredictionMarket is Ownable, AccessControl, ReentrancyGuard, Pausa
         uint256 daysUntilTarget = timeUntilTarget / 1 days;
         
         // Higher multiplier for earlier predictions (up to 7 days)
-        if (daysUntilTarget >= 7) return LEAD_TIME_BASE * 2;
-        if (daysUntilTarget >= 3) return (LEAD_TIME_BASE * 3) / 2;
-        if (daysUntilTarget >= 1) return (LEAD_TIME_BASE * 4) / 3;
-        return LEAD_TIME_BASE;
+        if (daysUntilTarget >= 7) return TorchPredictionMarketConstants.LEAD_TIME_BASE * 2;
+        if (daysUntilTarget >= 3) return (TorchPredictionMarketConstants.LEAD_TIME_BASE * 3) / 2;
+        if (daysUntilTarget >= 1) return (TorchPredictionMarketConstants.LEAD_TIME_BASE * 4) / 3;
+        return TorchPredictionMarketConstants.LEAD_TIME_BASE;
     }
 
     /**
