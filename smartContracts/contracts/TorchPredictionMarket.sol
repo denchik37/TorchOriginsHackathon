@@ -3,8 +3,10 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 
-contract TorchPredictionMarket is Ownable, AccessControl {
+contract TorchPredictionMarket is Ownable, AccessControl, ReentrancyGuard, Pausable {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     constructor() {
         grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -101,6 +103,22 @@ contract TorchPredictionMarket is Ownable, AccessControl {
     mapping(uint256 => uint256) public dailyPoolQuality; // day => total quality-weighted amount
     mapping(uint256 => mapping(uint256 => bool)) public dailyBetProcessed; // day => betId => processed
 
+    // Phase 5: UX, Security & Polish
+    // Leaderboard tracking
+    struct LeaderboardEntry {
+        address user;
+        uint256 totalPayout;
+        uint256 totalBets;
+        uint256 winningBets;
+    }
+    
+    mapping(address => LeaderboardEntry) public leaderboard;
+    address[] public topWinners; // Top 10 winners by net payout
+    
+    // Bet history tracking
+    mapping(address => uint256[]) public userBets; // user => array of bet IDs
+    mapping(address => uint256) public userBetCount; // user => number of bets placed
+
     // Resolved prices mapping: targetTimestamp => resolvedPrice
     mapping(uint256 => uint256) public resolvedPrices;
     mapping(uint256 => bool) public isResolved;
@@ -110,7 +128,7 @@ contract TorchPredictionMarket is Ownable, AccessControl {
         uint256 targetTimestamp,
         uint256 priceMin,
         uint256 priceMax
-    ) external payable {
+    ) external payable whenNotPaused nonReentrant {
         require(msg.value >= MIN_BET_AMOUNT, "Bet amount too low");
         require(targetTimestamp > block.timestamp, "Target time must be in the future");
         require(targetTimestamp <= block.timestamp + 7 days, "Target time too far in future");
@@ -145,6 +163,10 @@ contract TorchPredictionMarket is Ownable, AccessControl {
             leadTime: leadTime,
             claimed: false
         });
+
+        // Phase 5: Track user bet history
+        userBets[msg.sender].push(betCount);
+        userBetCount[msg.sender]++;
 
         emit BetPlaced(
             betCount,
@@ -273,7 +295,7 @@ contract TorchPredictionMarket is Ownable, AccessControl {
      * @dev Function for winners to claim their payouts
      * @param betId The ID of the bet to claim payout for
      */
-    function claimPayout(uint256 betId) external {
+    function claimPayout(uint256 betId) external whenNotPaused nonReentrant {
         require(betId < betCount, "Invalid bet ID");
         Bet storage bet = bets[betId];
         require(bet.user == msg.sender, "Only bet owner can claim");
@@ -299,6 +321,9 @@ contract TorchPredictionMarket is Ownable, AccessControl {
         // Mark as claimed
         bet.claimed = true;
         
+        // Phase 5: Update leaderboard
+        updateLeaderboard(msg.sender, payout);
+        
         // Transfer payout
         (bool success,) = msg.sender.call{value: payout}("");
         require(success, "Failed to send payout");
@@ -311,5 +336,146 @@ contract TorchPredictionMarket is Ownable, AccessControl {
             payout,
             dailyKey
         );
+    }
+
+    /**
+     * @dev Updates the leaderboard for a user, including total payout, total bets, and winning bets.
+     * @param user The address of the user to update.
+     * @param payout The total payout amount for the user.
+     */
+    function updateLeaderboard(address user, uint256 payout) internal {
+        LeaderboardEntry storage entry = leaderboard[user];
+        entry.totalPayout += payout;
+        entry.totalBets++;
+        if (payout > 0) {
+            entry.winningBets++;
+        }
+    }
+
+    /**
+     * @dev Get all bets for a user
+     * @param user The address of the user
+     * @return Array of bet IDs for the user
+     */
+    function getUserBets(address user) external view returns (uint256[] memory) {
+        return userBets[user];
+    }
+
+    /**
+     * @dev Get bet details for UI display
+     * @param betId The ID of the bet
+     * @return user The address of the bet user
+     * @return targetTimestamp The target timestamp for the bet
+     * @return priceMin The minimum price in the range
+     * @return priceMax The maximum price in the range
+     * @return amount The bet amount after fees
+     * @return settled Whether the bet has been settled
+     * @return claimed Whether the payout has been claimed
+     * @return quality The quality score of the bet
+     */
+    function getBetDetails(uint256 betId) external view returns (
+        address user,
+        uint256 targetTimestamp,
+        uint256 priceMin,
+        uint256 priceMax,
+        uint256 amount,
+        bool settled,
+        bool claimed,
+        uint256 quality
+    ) {
+        require(betId < betCount, "Invalid bet ID");
+        Bet storage bet = bets[betId];
+        return (
+            bet.user,
+            bet.targetTimestamp,
+            bet.priceMin,
+            bet.priceMax,
+            bet.amount,
+            bet.settled,
+            bet.claimed,
+            bet.quality
+        );
+    }
+
+    /**
+     * @dev Get open bets for a user (not settled)
+     * @param user The address of the user
+     * @return Array of bet IDs that are not yet settled
+     */
+    function getOpenBets(address user) external view returns (uint256[] memory) {
+        uint256[] memory allBets = userBets[user];
+        uint256[] memory openBets = new uint256[](allBets.length);
+        uint256 openCount = 0;
+        
+        for (uint256 i = 0; i < allBets.length; i++) {
+            if (!bets[allBets[i]].settled) {
+                openBets[openCount] = allBets[i];
+                openCount++;
+            }
+        }
+        
+        // Resize array to actual count
+        uint256[] memory result = new uint256[](openCount);
+        for (uint256 i = 0; i < openCount; i++) {
+            result[i] = openBets[i];
+        }
+        
+        return result;
+    }
+
+    /**
+     * @dev Get closed bets for a user (settled)
+     * @param user The address of the user
+     * @return Array of bet IDs that are settled
+     */
+    function getClosedBets(address user) external view returns (uint256[] memory) {
+        uint256[] memory allBets = userBets[user];
+        uint256[] memory closedBets = new uint256[](allBets.length);
+        uint256 closedCount = 0;
+        
+        for (uint256 i = 0; i < allBets.length; i++) {
+            if (bets[allBets[i]].settled) {
+                closedBets[closedCount] = allBets[i];
+                closedCount++;
+            }
+        }
+        
+        // Resize array to actual count
+        uint256[] memory result = new uint256[](closedCount);
+        for (uint256 i = 0; i < closedCount; i++) {
+            result[i] = closedBets[i];
+        }
+        
+        return result;
+    }
+
+    /**
+     * @dev Get leaderboard entry for a user
+     * @param user The address of the user
+     * @return totalPayout The total payout amount for the user
+     * @return totalBets The total number of bets placed by the user
+     * @return winningBets The number of winning bets for the user
+     */
+    function getLeaderboardEntry(address user) external view returns (
+        uint256 totalPayout,
+        uint256 totalBets,
+        uint256 winningBets
+    ) {
+        LeaderboardEntry storage entry = leaderboard[user];
+        return (entry.totalPayout, entry.totalBets, entry.winningBets);
+    }
+
+    /**
+     * @dev Pause the contract for safety
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @dev Unpause the contract
+     */
+    function unpause() external onlyOwner {
+        _unpause();
     }
 }
