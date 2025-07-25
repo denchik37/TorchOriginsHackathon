@@ -13,6 +13,39 @@ pragma solidity ^0.8.0;
  * - Security features including reentrancy protection and pausability
  */
 interface ITorchPredictionMarket {
+    // ============ CUSTOM ERRORS ============
+    
+    // Betting errors
+    error BetAmountTooLow(uint256 sent, uint256 required);
+    error TargetTimeInPast(uint256 target, uint256 current);
+    error TargetTimeTooFar(uint256 target, uint256 maxAllowed);
+    error InvalidPriceRange(uint256 min, uint256 max);
+    error PriceMustBePositive(uint256 price);
+    error PriceRangeTooWide(uint256 range, uint256 maxRange);
+    
+    // Resolution errors
+    error CannotResolveFutureTimestamp(uint256 target, uint256 current);
+    error AlreadyResolved(uint256 timestamp);
+    error ResolvedPriceMustBePositive(uint256 price);
+    
+    // Claim errors
+    error InvalidBetId(uint256 betId, uint256 maxBetId);
+    error OnlyBetOwnerCanClaim(address caller, address owner);
+    error BetNotSettled(uint256 betId);
+    error PayoutAlreadyClaimed(uint256 betId);
+    error BetDidNotWin(uint256 betId);
+    error NoPoolAvailable(uint256 dailyKey);
+    error NoQualityPoolAvailable(uint256 dailyKey);
+    
+    // Fee errors
+    error NoFeesToWithdraw();
+    error FailedToSendFees();
+    
+    // General errors
+    error InsufficientBalance(address user, uint256 requested, uint256 available);
+    error FailedToSendEther();
+    error FailedToSendPayout();
+    
     // ============ STRUCTS ============
     
     struct Bet {

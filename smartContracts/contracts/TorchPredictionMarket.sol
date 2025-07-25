@@ -89,17 +89,17 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
 
     // Function to withdraw all Ether from this contract.
     function withdraw(uint256 amount) public {
-        require(balances[msg.sender] >= amount, "Insufficient balance");
+        if (balances[msg.sender] < amount) revert InsufficientBalance(msg.sender, amount, balances[msg.sender]);
         balances[msg.sender] -= amount;
         (bool success,) = msg.sender.call{value: amount}("");
-        require(success, "Failed to send Ether");
+        if (!success) revert FailedToSendEther();
     }
 
     // Function to transfer Ether from this contract to address from input
     function transfer(address payable _to, uint256 _amount) public {
         // Note that "to" is declared as payable
         (bool success,) = _to.call{value: _amount}("");
-        require(success, "Failed to send Ether");
+        if (!success) revert FailedToSendEther();
     }
 
     // ==============================================================
@@ -111,15 +111,15 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
         uint256 priceMin,
         uint256 priceMax
     ) external payable whenNotPaused nonReentrant {
-        require(msg.value >= MIN_BET_AMOUNT, "Bet amount too low");
-        require(targetTimestamp > block.timestamp, "Target time must be in the future");
-        require(targetTimestamp <= block.timestamp + 7 days, "Target time too far in future");
-        require(priceMin < priceMax, "Invalid price range");
-        require(priceMin > 0, "Price must be positive");
+        if (msg.value < MIN_BET_AMOUNT) revert BetAmountTooLow(msg.value, MIN_BET_AMOUNT);
+        if (targetTimestamp <= block.timestamp) revert TargetTimeInPast(targetTimestamp, block.timestamp);
+        if (targetTimestamp > block.timestamp + 7 days) revert TargetTimeTooFar(targetTimestamp, block.timestamp + 7 days);
+        if (priceMin >= priceMax) revert InvalidPriceRange(priceMin, priceMax);
+        if (priceMin == 0) revert PriceMustBePositive(priceMin);
         
         // Validate price range is reasonable (not too wide)
         uint256 priceRange = ((priceMax - priceMin) * BPS_DENOMINATOR) / priceMin;
-        require(priceRange <= MAX_PRICE_RANGE, "Price range too wide");
+        if (priceRange > MAX_PRICE_RANGE) revert PriceRangeTooWide(priceRange, MAX_PRICE_RANGE);
 
         // Calculate fee and net amount
         uint256 fee = (msg.value * FEE_BPS) / BPS_DENOMINATOR;
@@ -199,9 +199,9 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
     // ==============================================================
 
     function resolveBets(uint256 targetTimestamp, uint256 resolvedPrice) external onlyRole(ADMIN_ROLE) {
-        require(targetTimestamp <= block.timestamp, "Cannot resolve future timestamps");
-        require(!isResolved[targetTimestamp], "Already resolved for this timestamp");
-        require(resolvedPrice > 0, "Resolved price must be positive");
+        if (targetTimestamp > block.timestamp) revert CannotResolveFutureTimestamp(targetTimestamp, block.timestamp);
+        if (isResolved[targetTimestamp]) revert AlreadyResolved(targetTimestamp);
+        if (resolvedPrice == 0) revert ResolvedPriceMustBePositive(resolvedPrice);
 
         // Store the resolved price
         resolvedPrices[targetTimestamp] = resolvedPrice;
@@ -243,11 +243,11 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
     // ==============================================================
 
     function withdrawFees() external onlyOwner {
-        require(protocolFees > 0, "No fees to withdraw");
+        if (protocolFees == 0) revert NoFeesToWithdraw();
         uint256 amount = protocolFees;
         protocolFees = 0;
         (bool success,) = owner().call{value: amount}("");
-        require(success, "Failed to send fees");
+        if (!success) revert FailedToSendFees();
     }
 
     function grantAdminRole(address admin) external onlyOwner {
@@ -288,7 +288,7 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
         bool claimed,
         uint256 quality
     ) {
-        require(betId < betCount, "Invalid bet ID");
+        if (betId >= betCount) revert InvalidBetId(betId, betCount);
         Bet storage bet = bets[betId];
         return (
             bet.user,
@@ -354,24 +354,24 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
     }
 
     function claimPayout(uint256 betId) external whenNotPaused nonReentrant {
-        require(betId < betCount, "Invalid bet ID");
+        if (betId >= betCount) revert InvalidBetId(betId, betCount);
         Bet storage bet = bets[betId];
-        require(bet.user == msg.sender, "Only bet owner can claim");
-        require(bet.settled, "Bet not yet settled");
-        require(!bet.claimed, "Payout already claimed");
+        if (bet.user != msg.sender) revert OnlyBetOwnerCanClaim(msg.sender, bet.user);
+        if (!bet.settled) revert BetNotSettled(betId);
+        if (bet.claimed) revert PayoutAlreadyClaimed(betId);
         
         // Check if bet won
         uint256 resolvedPrice = resolvedPrices[bet.targetTimestamp];
         bool won = (resolvedPrice >= bet.priceMin && resolvedPrice <= bet.priceMax);
-        require(won, "Bet did not win");
+        if (!won) revert BetDidNotWin(betId);
         
         // Calculate quality-based payout
         uint256 dailyKey = bet.targetTimestamp / 1 days;
         uint256 totalPool = dailyPoolTotal[dailyKey];
         uint256 totalQuality = dailyPoolQuality[dailyKey];
         
-        require(totalPool > 0, "No pool available");
-        require(totalQuality > 0, "No quality pool available");
+        if (totalPool == 0) revert NoPoolAvailable(dailyKey);
+        if (totalQuality == 0) revert NoQualityPoolAvailable(dailyKey);
         
         // Calculate payout: (stake × quality) / Σ (stake × quality) × allBets
         uint256 payout = (bet.amount * bet.quality * totalPool) / totalQuality;
@@ -384,7 +384,7 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
         
         // Transfer payout
         (bool success,) = msg.sender.call{value: payout}("");
-        require(success, "Failed to send payout");
+        if (!success) revert FailedToSendPayout();
         
         emit PayoutClaimed(
             betId,
