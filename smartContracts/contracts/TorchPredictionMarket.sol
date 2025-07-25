@@ -57,6 +57,8 @@ contract TorchPredictionMarket {
 
     uint256 public constant FEE_BPS = 50; // 0.5% in basis points (bps)
     uint256 public constant BPS_DENOMINATOR = 10000;
+    uint256 public constant MIN_BET_AMOUNT = 0.1 ether; // Minimum bet amount
+    uint256 public constant MAX_PRICE_RANGE = 1000; // Maximum price range in basis points
     uint256 public protocolFees; // Accumulated fees for admin
 
     function placeBet(
@@ -64,9 +66,15 @@ contract TorchPredictionMarket {
         uint256 priceMin,
         uint256 priceMax
     ) external payable {
-        require(msg.value > 0, "Bet amount must be > 0");
+        require(msg.value >= MIN_BET_AMOUNT, "Bet amount too low");
         require(targetTimestamp > block.timestamp, "Target time must be in the future");
+        require(targetTimestamp <= block.timestamp + 7 days, "Target time too far in future");
         require(priceMin < priceMax, "Invalid price range");
+        require(priceMin > 0, "Price must be positive");
+        
+        // Validate price range is reasonable (not too wide)
+        uint256 priceRange = ((priceMax - priceMin) * BPS_DENOMINATOR) / priceMin;
+        require(priceRange <= MAX_PRICE_RANGE, "Price range too wide");
 
         // Calculate fee and net amount
         uint256 fee = (msg.value * FEE_BPS) / BPS_DENOMINATOR;
