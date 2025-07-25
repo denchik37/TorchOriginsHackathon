@@ -47,6 +47,11 @@ contract TorchPredictionMarket is Ownable, AccessControl {
         uint256 amount; // Amount after fee
         uint256 fee;    // Protocol fee
         bool settled;
+        // Phase 4: Scoring & Rewards
+        uint256 quality;        // Calculated quality score
+        uint256 sharpness;      // Sharpness multiplier
+        uint256 leadTime;       // Lead time multiplier
+        bool claimed;           // Whether payout has been claimed
     }
 
     uint256 public betCount;
@@ -71,11 +76,30 @@ contract TorchPredictionMarket is Ownable, AccessControl {
         uint256 payout
     );
 
+    event PayoutClaimed(
+        uint256 indexed betId,
+        address indexed user,
+        uint256 targetTimestamp,
+        uint256 quality,
+        uint256 payout,
+        uint256 dailyPool
+    );
+
     uint256 public constant FEE_BPS = 50; // 0.5% in basis points (bps)
     uint256 public constant BPS_DENOMINATOR = 10000;
     uint256 public constant MIN_BET_AMOUNT = 0.1 ether; // Minimum bet amount
     uint256 public constant MAX_PRICE_RANGE = 1000; // Maximum price range in basis points
     uint256 public protocolFees; // Accumulated fees for admin
+
+    // Phase 4: Scoring & Rewards
+    uint256 public constant SHARPNESS_BASE = 1000; // Base for sharpness calculation
+    uint256 public constant LEAD_TIME_BASE = 1000; // Base for lead time calculation
+    uint256 public constant QUALITY_DENOMINATOR = 10000; // Denominator for quality calculations
+    
+    // Daily pools tracking
+    mapping(uint256 => uint256) public dailyPoolTotal; // day => total pool amount
+    mapping(uint256 => uint256) public dailyPoolQuality; // day => total quality-weighted amount
+    mapping(uint256 => mapping(uint256 => bool)) public dailyBetProcessed; // day => betId => processed
 
     // Resolved prices mapping: targetTimestamp => resolvedPrice
     mapping(uint256 => uint256) public resolvedPrices;
@@ -102,6 +126,11 @@ contract TorchPredictionMarket is Ownable, AccessControl {
         uint256 netAmount = msg.value - fee;
         protocolFees += fee;
 
+        // Phase 4: Calculate quality metrics
+        uint256 sharpness = calculateSharpness(priceMin, priceMax);
+        uint256 leadTime = calculateLeadTime(targetTimestamp);
+        uint256 quality = (sharpness * leadTime) / QUALITY_DENOMINATOR;
+
         // Store bet
         bets[betCount] = Bet({
             user: msg.sender,
@@ -110,7 +139,11 @@ contract TorchPredictionMarket is Ownable, AccessControl {
             priceMax: priceMax,
             amount: netAmount,
             fee: fee,
-            settled: false
+            settled: false,
+            quality: quality,
+            sharpness: sharpness,
+            leadTime: leadTime,
+            claimed: false
         });
 
         emit BetPlaced(
@@ -124,6 +157,35 @@ contract TorchPredictionMarket is Ownable, AccessControl {
         );
 
         betCount++;
+    }
+
+    /**
+     * @dev Calculate sharpness multiplier based on price range
+     * @param priceMin Minimum price in the range
+     * @param priceMax Maximum price in the range
+     * @return Sharpness multiplier (higher = more precise prediction)
+     */
+    function calculateSharpness(uint256 priceMin, uint256 priceMax) internal pure returns (uint256) {
+        uint256 range = ((priceMax - priceMin) * SHARPNESS_BASE) / priceMin;
+        // Inverse relationship: smaller range = higher sharpness
+        if (range == 0) return SHARPNESS_BASE;
+        return SHARPNESS_BASE / range;
+    }
+
+    /**
+     * @dev Calculate lead time multiplier based on how early the bet was placed
+     * @param targetTimestamp The target timestamp for the bet
+     * @return Lead time multiplier (higher = earlier prediction)
+     */
+    function calculateLeadTime(uint256 targetTimestamp) internal view returns (uint256) {
+        uint256 timeUntilTarget = targetTimestamp - block.timestamp;
+        uint256 daysUntilTarget = timeUntilTarget / 1 days;
+        
+        // Higher multiplier for earlier predictions (up to 7 days)
+        if (daysUntilTarget >= 7) return LEAD_TIME_BASE * 2;
+        if (daysUntilTarget >= 3) return (LEAD_TIME_BASE * 3) / 2;
+        if (daysUntilTarget >= 1) return (LEAD_TIME_BASE * 4) / 3;
+        return LEAD_TIME_BASE;
     }
 
     /**
@@ -147,18 +209,16 @@ contract TorchPredictionMarket is Ownable, AccessControl {
             // Check if this bet is for the target timestamp and not yet settled
             if (bet.targetTimestamp == targetTimestamp && !bet.settled) {
                 bool won = (resolvedPrice >= bet.priceMin && resolvedPrice <= bet.priceMax);
-                uint256 payout = 0;
-                
-                if (won) {
-                    // Calculate payout (2x the bet amount for winning)
-                    payout = bet.amount * 2;
-                    // Transfer winnings to user
-                    (bool success,) = bet.user.call{value: payout}("");
-                    require(success, "Failed to send payout");
-                }
                 
                 // Mark bet as settled
                 bet.settled = true;
+                
+                // Phase 4: Track daily pools for quality-based payouts
+                if (won) {
+                    uint256 dailyKey = targetTimestamp / 1 days;
+                    dailyPoolTotal[dailyKey] += bet.amount;
+                    dailyPoolQuality[dailyKey] += bet.amount * bet.quality;
+                }
                 
                 // Emit resolution event
                 emit BetResolved(
@@ -167,7 +227,7 @@ contract TorchPredictionMarket is Ownable, AccessControl {
                     targetTimestamp,
                     resolvedPrice,
                     won,
-                    payout
+                    0 // Payout will be calculated when claimed
                 );
             }
         }
@@ -207,5 +267,49 @@ contract TorchPredictionMarket is Ownable, AccessControl {
      */
     function isAdmin(address admin) external view returns (bool) {
         return hasRole(ADMIN_ROLE, admin);
+    }
+
+    /**
+     * @dev Function for winners to claim their payouts
+     * @param betId The ID of the bet to claim payout for
+     */
+    function claimPayout(uint256 betId) external {
+        require(betId < betCount, "Invalid bet ID");
+        Bet storage bet = bets[betId];
+        require(bet.user == msg.sender, "Only bet owner can claim");
+        require(bet.settled, "Bet not yet settled");
+        require(!bet.claimed, "Payout already claimed");
+        
+        // Check if bet won
+        uint256 resolvedPrice = resolvedPrices[bet.targetTimestamp];
+        bool won = (resolvedPrice >= bet.priceMin && resolvedPrice <= bet.priceMax);
+        require(won, "Bet did not win");
+        
+        // Calculate quality-based payout
+        uint256 dailyKey = bet.targetTimestamp / 1 days;
+        uint256 totalPool = dailyPoolTotal[dailyKey];
+        uint256 totalQuality = dailyPoolQuality[dailyKey];
+        
+        require(totalPool > 0, "No pool available");
+        require(totalQuality > 0, "No quality pool available");
+        
+        // Calculate payout: (stake × quality) / Σ (stake × quality) × allBets
+        uint256 payout = (bet.amount * bet.quality * totalPool) / totalQuality;
+        
+        // Mark as claimed
+        bet.claimed = true;
+        
+        // Transfer payout
+        (bool success,) = msg.sender.call{value: payout}("");
+        require(success, "Failed to send payout");
+        
+        emit PayoutClaimed(
+            betId,
+            msg.sender,
+            bet.targetTimestamp,
+            bet.quality,
+            payout,
+            dailyKey
+        );
     }
 }
