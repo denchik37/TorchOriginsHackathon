@@ -7,6 +7,13 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "./ITorchPredictionMarket.sol";
 
+/**
+ * @title TorchPredictionMarket
+ * @dev Implementation of the Torch Prediction Market
+ * 
+ * NatSpec documentation is inherited from ITorchPredictionMarket interface.
+ * See interface for detailed function documentation.
+ */
 contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl, ReentrancyGuard, Pausable {
     // ==============================================================
     // |                    Roles & Constructor                     |
@@ -160,12 +167,6 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
     // |                    Internal Functions                      |
     // ==============================================================
 
-    /**
-     * @dev Calculate sharpness multiplier based on price range
-     * @param priceMin Minimum price in the range
-     * @param priceMax Maximum price in the range
-     * @return Sharpness multiplier (higher = more precise prediction)
-     */
     function calculateSharpness(uint256 priceMin, uint256 priceMax) internal pure returns (uint256) {
         uint256 range = ((priceMax - priceMin) * SHARPNESS_BASE) / priceMin;
         // Inverse relationship: smaller range = higher sharpness
@@ -173,11 +174,6 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
         return SHARPNESS_BASE / range;
     }
 
-    /**
-     * @dev Calculate lead time multiplier based on how early the bet was placed
-     * @param targetTimestamp The target timestamp for the bet
-     * @return Lead time multiplier (higher = earlier prediction)
-     */
     function calculateLeadTime(uint256 targetTimestamp) internal view returns (uint256) {
         uint256 timeUntilTarget = targetTimestamp - block.timestamp;
         uint256 daysUntilTarget = timeUntilTarget / 1 days;
@@ -189,11 +185,6 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
         return LEAD_TIME_BASE;
     }
 
-    /**
-     * @dev Updates the leaderboard for a user, including total payout, total bets, and winning bets.
-     * @param user The address of the user to update.
-     * @param payout The total payout amount for the user.
-     */
     function updateLeaderboard(address user, uint256 payout) internal {
         LeaderboardEntry storage entry = leaderboard[user];
         entry.totalPayout += payout;
@@ -207,11 +198,6 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
     // |                    Admin Functions                         |
     // ==============================================================
 
-    /**
-     * @dev Admin function to resolve bets for a specific targetTimestamp
-     * @param targetTimestamp The timestamp for which to resolve bets
-     * @param resolvedPrice The final price at the target timestamp
-     */
     function resolveBets(uint256 targetTimestamp, uint256 resolvedPrice) external onlyRole(ADMIN_ROLE) {
         require(targetTimestamp <= block.timestamp, "Cannot resolve future timestamps");
         require(!isResolved[targetTimestamp], "Already resolved for this timestamp");
@@ -256,9 +242,6 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
     // |                    Owner Functions                         |
     // ==============================================================
 
-    /**
-     * @dev Owner function to withdraw accumulated protocol fees
-     */
     function withdrawFees() external onlyOwner {
         require(protocolFees > 0, "No fees to withdraw");
         uint256 amount = protocolFees;
@@ -267,32 +250,18 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
         require(success, "Failed to send fees");
     }
 
-    /**
-     * @dev Owner function to grant ADMIN_ROLE to an address
-     * @param admin The address to grant admin role to
-     */
     function grantAdminRole(address admin) external onlyOwner {
         grantRole(ADMIN_ROLE, admin);
     }
 
-    /**
-     * @dev Owner function to revoke ADMIN_ROLE from an address
-     * @param admin The address to revoke admin role from
-     */
     function revokeAdminRole(address admin) external onlyOwner {
         revokeRole(ADMIN_ROLE, admin);
     }
 
-    /**
-     * @dev Pause the contract for safety
-     */
     function pause() external onlyOwner {
         _pause();
     }
 
-    /**
-     * @dev Unpause the contract
-     */
     function unpause() external onlyOwner {
         _unpause();
     }
@@ -301,36 +270,14 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
     // |                    View Functions                          |
     // ==============================================================
 
-    /**
-     * @dev Function to check if an address has ADMIN_ROLE
-     * @param admin The address to check
-     * @return True if the address has ADMIN_ROLE
-     */
     function isAdmin(address admin) external view returns (bool) {
         return hasRole(ADMIN_ROLE, admin);
     }
 
-    /**
-     * @dev Get all bets for a user
-     * @param user The address of the user
-     * @return Array of bet IDs for the user
-     */
     function getUserBets(address user) external view returns (uint256[] memory) {
         return userBets[user];
     }
 
-    /**
-     * @dev Get bet details for UI display
-     * @param betId The ID of the bet
-     * @return user The address of the bet user
-     * @return targetTimestamp The target timestamp for the bet
-     * @return priceMin The minimum price in the range
-     * @return priceMax The maximum price in the range
-     * @return amount The bet amount after fees
-     * @return settled Whether the bet has been settled
-     * @return claimed Whether the payout has been claimed
-     * @return quality The quality score of the bet
-     */
     function getBetDetails(uint256 betId) external view returns (
         address user,
         uint256 targetTimestamp,
@@ -355,11 +302,6 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
         );
     }
 
-    /**
-     * @dev Get open bets for a user (not settled)
-     * @param user The address of the user
-     * @return Array of bet IDs that are not yet settled
-     */
     function getOpenBets(address user) external view returns (uint256[] memory) {
         uint256[] memory allBets = userBets[user];
         uint256[] memory openBets = new uint256[](allBets.length);
@@ -381,11 +323,6 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
         return result;
     }
 
-    /**
-     * @dev Get closed bets for a user (settled)
-     * @param user The address of the user
-     * @return Array of bet IDs that are settled
-     */
     function getClosedBets(address user) external view returns (uint256[] memory) {
         uint256[] memory allBets = userBets[user];
         uint256[] memory closedBets = new uint256[](allBets.length);
@@ -407,13 +344,6 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
         return result;
     }
 
-    /**
-     * @dev Get leaderboard entry for a user
-     * @param user The address of the user
-     * @return totalPayout The total payout amount for the user
-     * @return totalBets The total number of bets placed by the user
-     * @return winningBets The number of winning bets for the user
-     */
     function getLeaderboardEntry(address user) external view returns (
         uint256 totalPayout,
         uint256 totalBets,
@@ -421,5 +351,48 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
     ) {
         LeaderboardEntry storage entry = leaderboard[user];
         return (entry.totalPayout, entry.totalBets, entry.winningBets);
+    }
+
+    function claimPayout(uint256 betId) external whenNotPaused nonReentrant {
+        require(betId < betCount, "Invalid bet ID");
+        Bet storage bet = bets[betId];
+        require(bet.user == msg.sender, "Only bet owner can claim");
+        require(bet.settled, "Bet not yet settled");
+        require(!bet.claimed, "Payout already claimed");
+        
+        // Check if bet won
+        uint256 resolvedPrice = resolvedPrices[bet.targetTimestamp];
+        bool won = (resolvedPrice >= bet.priceMin && resolvedPrice <= bet.priceMax);
+        require(won, "Bet did not win");
+        
+        // Calculate quality-based payout
+        uint256 dailyKey = bet.targetTimestamp / 1 days;
+        uint256 totalPool = dailyPoolTotal[dailyKey];
+        uint256 totalQuality = dailyPoolQuality[dailyKey];
+        
+        require(totalPool > 0, "No pool available");
+        require(totalQuality > 0, "No quality pool available");
+        
+        // Calculate payout: (stake × quality) / Σ (stake × quality) × allBets
+        uint256 payout = (bet.amount * bet.quality * totalPool) / totalQuality;
+        
+        // Mark as claimed
+        bet.claimed = true;
+        
+        // Phase 5: Update leaderboard
+        updateLeaderboard(msg.sender, payout);
+        
+        // Transfer payout
+        (bool success,) = msg.sender.call{value: payout}("");
+        require(success, "Failed to send payout");
+        
+        emit PayoutClaimed(
+            betId,
+            msg.sender,
+            bet.targetTimestamp,
+            bet.quality,
+            payout,
+            dailyKey
+        );
     }
 }

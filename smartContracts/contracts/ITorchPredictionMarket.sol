@@ -4,6 +4,13 @@ pragma solidity ^0.8.0;
 /**
  * @title ITorchPredictionMarket
  * @dev Interface for the Torch Prediction Market contract
+ * 
+ * This contract implements a sophisticated prediction market with:
+ * - Quality-based scoring system (sharpness + lead time)
+ * - Daily pools for reward distribution
+ * - Role-based access control for admin functions
+ * - Comprehensive UX features and leaderboard tracking
+ * - Security features including reentrancy protection and pausability
  */
 interface ITorchPredictionMarket {
     // ============ STRUCTS ============
@@ -87,6 +94,26 @@ interface ITorchPredictionMarket {
      */
     function claimPayout(uint256 betId) external;
 
+    // ============ USER FUNCTIONS ============
+    
+    /**
+     * @dev Deposit Ether into the contract
+     */
+    function deposit() external payable;
+
+    /**
+     * @dev Withdraw Ether from the contract
+     * @param amount The amount to withdraw
+     */
+    function withdraw(uint256 amount) external;
+
+    /**
+     * @dev Transfer Ether to another address
+     * @param _to The recipient address
+     * @param _amount The amount to transfer
+     */
+    function transfer(address payable _to, uint256 _amount) external;
+
     // ============ VIEW FUNCTIONS ============
     
     /**
@@ -146,6 +173,13 @@ interface ITorchPredictionMarket {
         uint256 winningBets
     );
 
+    /**
+     * @dev Function to check if an address has ADMIN_ROLE
+     * @param admin The address to check
+     * @return True if the address has ADMIN_ROLE
+     */
+    function isAdmin(address admin) external view returns (bool);
+
     // ============ ADMIN FUNCTIONS ============
     
     /**
@@ -164,13 +198,6 @@ interface ITorchPredictionMarket {
      * @param admin The address to revoke admin role from
      */
     function revokeAdminRole(address admin) external;
-
-    /**
-     * @dev Function to check if an address has ADMIN_ROLE
-     * @param admin The address to check
-     * @return True if the address has ADMIN_ROLE
-     */
-    function isAdmin(address admin) external view returns (bool);
 
     /**
      * @dev Pause the contract for safety
