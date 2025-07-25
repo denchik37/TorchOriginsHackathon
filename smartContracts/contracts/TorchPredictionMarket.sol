@@ -8,15 +8,22 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "./ITorchPredictionMarket.sol";
 
 contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl, ReentrancyGuard, Pausable {
+    // ==============================================================
+    // |                    Roles & Constructor                     |
+    // ==============================================================
+    
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    
     constructor() {
         grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         grantRole(ADMIN_ROLE, msg.sender);
     }
 
+    // ==============================================================
+    // |                    Constants                               |
+    // ==============================================================
 
-
-        // Fee constants
+    // Fee constants
     uint256 constant FEE_BPS = 50; // 0.5% in basis points (bps)
     uint256 constant BPS_DENOMINATOR = 10000;
     
@@ -28,11 +35,13 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
     uint256 constant SHARPNESS_BASE = 1000; // Base for sharpness calculation
     uint256 constant LEAD_TIME_BASE = 1000; // Base for lead time calculation
     uint256 constant QUALITY_DENOMINATOR = 10000; // Denominator for quality calculations
-} 
+
+    // ==============================================================
+    // |                    State Variables                         |
+    // ==============================================================
 
     mapping(address => uint256) public balances;
-
-        uint256 public betCount;
+    uint256 public betCount;
     mapping(uint256 => Bet) public bets;
 
     // Phase 4: Scoring & Rewards
@@ -55,6 +64,10 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
     // Resolved prices mapping: targetTimestamp => resolvedPrice
     mapping(uint256 => uint256) public resolvedPrices;
     mapping(uint256 => bool) public isResolved;
+
+    // ==============================================================
+    // |                    User Functions                          |
+    // ==============================================================
 
     // Function to deposit Ether into this contract.
     // Call this function along with some Ether.
@@ -82,33 +95,34 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
         require(success, "Failed to send Ether");
     }
 
-
-
+    // ==============================================================
+    // |                    Core Betting Functions                  |
+    // ==============================================================
 
     function placeBet(
         uint256 targetTimestamp,
         uint256 priceMin,
         uint256 priceMax
     ) external payable whenNotPaused nonReentrant {
-        require(msg.value >= TorchPredictionMarketConstants.MIN_BET_AMOUNT, "Bet amount too low");
+        require(msg.value >= MIN_BET_AMOUNT, "Bet amount too low");
         require(targetTimestamp > block.timestamp, "Target time must be in the future");
         require(targetTimestamp <= block.timestamp + 7 days, "Target time too far in future");
         require(priceMin < priceMax, "Invalid price range");
         require(priceMin > 0, "Price must be positive");
         
         // Validate price range is reasonable (not too wide)
-        uint256 priceRange = ((priceMax - priceMin) * TorchPredictionMarketConstants.BPS_DENOMINATOR) / priceMin;
-        require(priceRange <= TorchPredictionMarketConstants.MAX_PRICE_RANGE, "Price range too wide");
+        uint256 priceRange = ((priceMax - priceMin) * BPS_DENOMINATOR) / priceMin;
+        require(priceRange <= MAX_PRICE_RANGE, "Price range too wide");
 
         // Calculate fee and net amount
-        uint256 fee = (msg.value * TorchPredictionMarketConstants.FEE_BPS) / TorchPredictionMarketConstants.BPS_DENOMINATOR;
+        uint256 fee = (msg.value * FEE_BPS) / BPS_DENOMINATOR;
         uint256 netAmount = msg.value - fee;
         protocolFees += fee;
 
         // Phase 4: Calculate quality metrics
         uint256 sharpness = calculateSharpness(priceMin, priceMax);
         uint256 leadTime = calculateLeadTime(targetTimestamp);
-        uint256 quality = (sharpness * leadTime) / TorchPredictionMarketConstants.QUALITY_DENOMINATOR;
+        uint256 quality = (sharpness * leadTime) / QUALITY_DENOMINATOR;
 
         // Store bet
         bets[betCount] = Bet({
@@ -142,6 +156,10 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
         betCount++;
     }
 
+    // ==============================================================
+    // |                    Internal Functions                      |
+    // ==============================================================
+
     /**
      * @dev Calculate sharpness multiplier based on price range
      * @param priceMin Minimum price in the range
@@ -149,10 +167,10 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
      * @return Sharpness multiplier (higher = more precise prediction)
      */
     function calculateSharpness(uint256 priceMin, uint256 priceMax) internal pure returns (uint256) {
-        uint256 range = ((priceMax - priceMin) * TorchPredictionMarketConstants.SHARPNESS_BASE) / priceMin;
+        uint256 range = ((priceMax - priceMin) * SHARPNESS_BASE) / priceMin;
         // Inverse relationship: smaller range = higher sharpness
-        if (range == 0) return TorchPredictionMarketConstants.SHARPNESS_BASE;
-        return TorchPredictionMarketConstants.SHARPNESS_BASE / range;
+        if (range == 0) return SHARPNESS_BASE;
+        return SHARPNESS_BASE / range;
     }
 
     /**
@@ -165,11 +183,29 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
         uint256 daysUntilTarget = timeUntilTarget / 1 days;
         
         // Higher multiplier for earlier predictions (up to 7 days)
-        if (daysUntilTarget >= 7) return TorchPredictionMarketConstants.LEAD_TIME_BASE * 2;
-        if (daysUntilTarget >= 3) return (TorchPredictionMarketConstants.LEAD_TIME_BASE * 3) / 2;
-        if (daysUntilTarget >= 1) return (TorchPredictionMarketConstants.LEAD_TIME_BASE * 4) / 3;
-        return TorchPredictionMarketConstants.LEAD_TIME_BASE;
+        if (daysUntilTarget >= 7) return LEAD_TIME_BASE * 2;
+        if (daysUntilTarget >= 3) return (LEAD_TIME_BASE * 3) / 2;
+        if (daysUntilTarget >= 1) return (LEAD_TIME_BASE * 4) / 3;
+        return LEAD_TIME_BASE;
     }
+
+    /**
+     * @dev Updates the leaderboard for a user, including total payout, total bets, and winning bets.
+     * @param user The address of the user to update.
+     * @param payout The total payout amount for the user.
+     */
+    function updateLeaderboard(address user, uint256 payout) internal {
+        LeaderboardEntry storage entry = leaderboard[user];
+        entry.totalPayout += payout;
+        entry.totalBets++;
+        if (payout > 0) {
+            entry.winningBets++;
+        }
+    }
+
+    // ==============================================================
+    // |                    Admin Functions                         |
+    // ==============================================================
 
     /**
      * @dev Admin function to resolve bets for a specific targetTimestamp
@@ -216,6 +252,10 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
         }
     }
 
+    // ==============================================================
+    // |                    Owner Functions                         |
+    // ==============================================================
+
     /**
      * @dev Owner function to withdraw accumulated protocol fees
      */
@@ -244,73 +284,30 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
     }
 
     /**
+     * @dev Pause the contract for safety
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @dev Unpause the contract
+     */
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
+    // ==============================================================
+    // |                    View Functions                          |
+    // ==============================================================
+
+    /**
      * @dev Function to check if an address has ADMIN_ROLE
      * @param admin The address to check
      * @return True if the address has ADMIN_ROLE
      */
     function isAdmin(address admin) external view returns (bool) {
         return hasRole(ADMIN_ROLE, admin);
-    }
-
-    /**
-     * @dev Function for winners to claim their payouts
-     * @param betId The ID of the bet to claim payout for
-     */
-    function claimPayout(uint256 betId) external whenNotPaused nonReentrant {
-        require(betId < betCount, "Invalid bet ID");
-        Bet storage bet = bets[betId];
-        require(bet.user == msg.sender, "Only bet owner can claim");
-        require(bet.settled, "Bet not yet settled");
-        require(!bet.claimed, "Payout already claimed");
-        
-        // Check if bet won
-        uint256 resolvedPrice = resolvedPrices[bet.targetTimestamp];
-        bool won = (resolvedPrice >= bet.priceMin && resolvedPrice <= bet.priceMax);
-        require(won, "Bet did not win");
-        
-        // Calculate quality-based payout
-        uint256 dailyKey = bet.targetTimestamp / 1 days;
-        uint256 totalPool = dailyPoolTotal[dailyKey];
-        uint256 totalQuality = dailyPoolQuality[dailyKey];
-        
-        require(totalPool > 0, "No pool available");
-        require(totalQuality > 0, "No quality pool available");
-        
-        // Calculate payout: (stake × quality) / Σ (stake × quality) × allBets
-        uint256 payout = (bet.amount * bet.quality * totalPool) / totalQuality;
-        
-        // Mark as claimed
-        bet.claimed = true;
-        
-        // Phase 5: Update leaderboard
-        updateLeaderboard(msg.sender, payout);
-        
-        // Transfer payout
-        (bool success,) = msg.sender.call{value: payout}("");
-        require(success, "Failed to send payout");
-        
-        emit PayoutClaimed(
-            betId,
-            msg.sender,
-            bet.targetTimestamp,
-            bet.quality,
-            payout,
-            dailyKey
-        );
-    }
-
-    /**
-     * @dev Updates the leaderboard for a user, including total payout, total bets, and winning bets.
-     * @param user The address of the user to update.
-     * @param payout The total payout amount for the user.
-     */
-    function updateLeaderboard(address user, uint256 payout) internal {
-        LeaderboardEntry storage entry = leaderboard[user];
-        entry.totalPayout += payout;
-        entry.totalBets++;
-        if (payout > 0) {
-            entry.winningBets++;
-        }
     }
 
     /**
@@ -424,19 +421,5 @@ contract TorchPredictionMarket is ITorchPredictionMarket, Ownable, AccessControl
     ) {
         LeaderboardEntry storage entry = leaderboard[user];
         return (entry.totalPayout, entry.totalBets, entry.winningBets);
-    }
-
-    /**
-     * @dev Pause the contract for safety
-     */
-    function pause() external onlyOwner {
-        _pause();
-    }
-
-    /**
-     * @dev Unpause the contract
-     */
-    function unpause() external onlyOwner {
-        _unpause();
     }
 }
