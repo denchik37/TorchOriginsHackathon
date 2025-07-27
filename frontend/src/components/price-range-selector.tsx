@@ -40,7 +40,7 @@ export function PriceRangeSelector({
       const normalizedDistance = distanceFromCurrent / maxDistance
       
       // Create a bell curve around current price
-      const betDensity = Math.exp(-(normalizedDistance * 2) ** 2)
+      const betDensity = Math.exp(-Math.pow(normalizedDistance * 2, 2))
       const betAmount = Math.floor(betDensity * totalBets / 10) + Math.random() * 50
       
       data.push({

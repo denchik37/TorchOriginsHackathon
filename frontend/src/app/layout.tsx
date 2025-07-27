@@ -2,9 +2,8 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
-import { WagmiProvider } from 'wagmi'
-import { config } from '@/lib/wagmi'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { headers } from 'next/headers'
+import ContextProvider from '../../context'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -13,28 +12,26 @@ export const metadata: Metadata = {
   description: 'Predict cryptocurrency token prices and earn rewards',
 }
 
-const queryClient = new QueryClient()
+// ATTENTION!!! RootLayout must be an async function to use headers() 
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Retrieve cookies from request headers on the server
+  const headersObj = await headers() // IMPORTANT: await the headers() call
+  const cookies = headersObj.get('cookie')
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <WagmiProvider config={config}>
-          <QueryClientProvider client={queryClient}>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="dark"
-              enableSystem
-              disableTransitionOnChange
-            >
-              {children}
-            </ThemeProvider>
-          </QueryClientProvider>
-        </WagmiProvider>
+        {/* Wrap children with ContextProvider, passing cookies */}
+        <ContextProvider cookies={cookies}>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+          </ThemeProvider>
+        </ContextProvider>
       </body>
     </html>
   )

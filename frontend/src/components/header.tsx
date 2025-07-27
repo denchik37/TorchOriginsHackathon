@@ -83,10 +83,7 @@ export function Header() {
               </DropdownMenu>
             </>
           ) : (
-            <Button variant="torch" size="sm">
-              <Wallet className="w-4 h-4 mr-2" />
-              Connect Wallet
-            </Button>
+            <appkit-button />
           )}
 
           <ThemeToggle />
