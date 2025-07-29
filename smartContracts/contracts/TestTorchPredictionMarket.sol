@@ -187,6 +187,149 @@ contract TestTorchPredictionMarket {
         return (stake * qualityBps) / BPS_DENOM;
     }
 
+    /// @notice Simulate placeBet and return all details for frontend validation
+    /// @param targetTimestamp The target timestamp for the prediction
+    /// @param priceMin Minimum price in BPS
+    /// @param priceMax Maximum price in BPS  
+    /// @param stakeAmount The amount to stake (replaces payable)
+    /// @return fee The protocol fee that will be deducted
+    /// @return stakeNet The net stake after fee deduction
+    /// @return sharpnessBps The sharpness multiplier in BPS
+    /// @return timeBps The time multiplier in BPS
+    /// @return qualityBps The combined quality multiplier in BPS
+    /// @return weight The calculated weight for this bet
+    /// @return bucket The bucket index this bet will be placed in
+    /// @return isValid Whether this bet would be valid (future timestamp, valid range, positive stake)
+    /// @return errorMessage Error message if bet is invalid
+    function simulatePlaceBet(
+        uint256 targetTimestamp,
+        uint256 priceMin,
+        uint256 priceMax,
+        uint256 stakeAmount
+    ) external view returns (
+        uint256 fee,
+        uint256 stakeNet,
+        uint256 sharpnessBps,
+        uint256 timeBps,
+        uint256 qualityBps,
+        uint256 weight,
+        uint256 bucket,
+        bool isValid,
+        string memory errorMessage
+    ) {
+        // Validate inputs
+        if (targetTimestamp <= block.timestamp) {
+            return (0, 0, 0, 0, 0, 0, 0, false, "must be future timestamp");
+        }
+        
+        if (priceMin >= priceMax) {
+            return (0, 0, 0, 0, 0, 0, 0, false, "invalid price range");
+        }
+        
+        if (stakeAmount == 0) {
+            return (0, 0, 0, 0, 0, 0, 0, false, "stake must be > 0");
+        }
+
+        // Calculate fee and net stake
+        fee = (stakeAmount * FEE_BPS) / BPS_DENOM;
+        stakeNet = stakeAmount - fee;
+
+        // Calculate multipliers
+        sharpnessBps = getSharpnessMultiplier(priceMin, priceMax);
+        timeBps = getTimeMultiplier(targetTimestamp);
+        qualityBps = (sharpnessBps * timeBps) / BPS_DENOM;
+
+        // Calculate weight
+        weight = (stakeNet * qualityBps) / BPS_DENOM;
+
+        // Calculate bucket
+        bucket = bucketIndex(targetTimestamp);
+
+        return (fee, stakeNet, sharpnessBps, timeBps, qualityBps, weight, bucket, true, "");
+    }
+
+    /// @notice Get detailed breakdown of a bet simulation with human-readable values
+    /// @param targetTimestamp The target timestamp for the prediction
+    /// @param priceMin Minimum price in BPS
+    /// @param priceMax Maximum price in BPS  
+    /// @param stakeAmount The amount to stake
+    /// @return simulation A struct containing all simulation details
+    function getBetSimulation(
+        uint256 targetTimestamp,
+        uint256 priceMin,
+        uint256 priceMax,
+        uint256 stakeAmount
+    ) external view returns (BetSimulation memory simulation) {
+        // Validate inputs
+        if (targetTimestamp <= block.timestamp) {
+            simulation = BetSimulation({
+                fee: 0, stakeNet: 0, sharpnessBps: 0, timeBps: 0, qualityBps: 0, weight: 0, bucket: 0,
+                isValid: false, errorMessage: "must be future timestamp",
+                priceMinDollars: 0, priceMaxDollars: 0, rangeDollars: 0, widthPercentage: 0,
+                sharpnessMultiplier: 0, timeMultiplier: 0, qualityMultiplier: 0, feePercentage: 0, daysFromNow: 0
+            });
+            return simulation;
+        }
+        
+        if (priceMin >= priceMax) {
+            simulation = BetSimulation({
+                fee: 0, stakeNet: 0, sharpnessBps: 0, timeBps: 0, qualityBps: 0, weight: 0, bucket: 0,
+                isValid: false, errorMessage: "invalid price range",
+                priceMinDollars: 0, priceMaxDollars: 0, rangeDollars: 0, widthPercentage: 0,
+                sharpnessMultiplier: 0, timeMultiplier: 0, qualityMultiplier: 0, feePercentage: 0, daysFromNow: 0
+            });
+            return simulation;
+        }
+        
+        if (stakeAmount == 0) {
+            simulation = BetSimulation({
+                fee: 0, stakeNet: 0, sharpnessBps: 0, timeBps: 0, qualityBps: 0, weight: 0, bucket: 0,
+                isValid: false, errorMessage: "stake must be > 0",
+                priceMinDollars: 0, priceMaxDollars: 0, rangeDollars: 0, widthPercentage: 0,
+                sharpnessMultiplier: 0, timeMultiplier: 0, qualityMultiplier: 0, feePercentage: 0, daysFromNow: 0
+            });
+            return simulation;
+        }
+
+        // Calculate fee and net stake
+        uint256 fee = (stakeAmount * FEE_BPS) / BPS_DENOM;
+        uint256 stakeNet = stakeAmount - fee;
+
+        // Calculate multipliers
+        uint256 sharpnessBps = getSharpnessMultiplier(priceMin, priceMax);
+        uint256 timeBps = getTimeMultiplier(targetTimestamp);
+        uint256 qualityBps = (sharpnessBps * timeBps) / BPS_DENOM;
+
+        // Calculate weight
+        uint256 weight = (stakeNet * qualityBps) / BPS_DENOM;
+
+        // Calculate bucket
+        uint256 bucket = bucketIndex(targetTimestamp);
+
+        simulation = BetSimulation({
+            // Raw values
+            fee: fee,
+            stakeNet: stakeNet,
+            sharpnessBps: sharpnessBps,
+            timeBps: timeBps,
+            qualityBps: qualityBps,
+            weight: weight,
+            bucket: bucket,
+            isValid: true,
+            errorMessage: "",
+            
+            // Human-readable values
+            priceMinDollars: priceMin, // Raw BPS value
+            priceMaxDollars: priceMax, // Raw BPS value  
+            rangeDollars: priceMax - priceMin, // Raw BPS range
+            widthPercentage: ((priceMax - priceMin) * 10000) / FIXED_PRICE,
+            sharpnessMultiplier: sharpnessBps, // Raw BPS value
+            timeMultiplier: timeBps, // Raw BPS value
+            qualityMultiplier: qualityBps, // Raw BPS value
+            feePercentage: (fee * 10000) / stakeAmount,
+            daysFromNow: (targetTimestamp - block.timestamp) / SECONDS_PER_DAY
+        });
+    }
 }
 
 
