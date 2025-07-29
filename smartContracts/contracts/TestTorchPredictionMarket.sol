@@ -248,6 +248,59 @@ contract TestTorchPredictionMarket {
         return (fee, stakeNet, sharpnessBps, timeBps, qualityBps, weight, bucket, true, "");
     }
 
+    /// @notice Place a bet without requiring ETH - for Graph indexing and testing
+    /// @param targetTimestamp The target timestamp for the prediction
+    /// @param priceMin Minimum price in BPS
+    /// @param priceMax Maximum price in BPS
+    /// @param stakeAmount The amount to stake (in wei)
+    /// @return betId The ID of the placed bet
+    function placeBetWithoutValue(
+        uint256 targetTimestamp,
+        uint256 priceMin,
+        uint256 priceMax,
+        uint256 stakeAmount
+    ) external returns (uint256) {
+        require(targetTimestamp > block.timestamp, "must be future timestamp");
+        require(priceMin < priceMax, "invalid price range");
+        require(stakeAmount > 0, "stake must be > 0");
+
+        // Calculate fee and net stake (same logic as placeBet)
+        uint256 fee = (stakeAmount * FEE_BPS) / BPS_DENOM;
+        uint256 stakeNet = stakeAmount - fee;
+
+        // Compute bet quality (sharpness × time) using fixed price
+        uint256 sharpBps = getSharpnessMultiplier(priceMin, priceMax);
+        uint256 timeBps  = getTimeMultiplier(targetTimestamp);
+        uint256 qualityBps = (sharpBps * timeBps) / BPS_DENOM;
+
+        // Compute weight as (stake × quality)
+        uint256 weight = (stakeNet * qualityBps) / BPS_DENOM;
+
+        // Determine which day‐bucket your bet belongs to
+        uint256 bucket = bucketIndex(targetTimestamp);
+
+        // Update pool totals
+        totalStakedInBucket[bucket] += stakeNet;
+        totalWeightInBucket[bucket] += weight;
+
+        // Store the bet
+        uint256 betId = nextBetId++;
+        bets[betId] = Bet({
+            bettor: msg.sender,
+            targetTimestamp: targetTimestamp,
+            priceMin: priceMin,
+            priceMax: priceMax,
+            stake: stakeNet,
+            qualityBps: qualityBps,
+            weight: weight,
+            finalized: false,
+            claimed: false
+        });
+
+        emit BetPlaced(betId, msg.sender, bucket, stakeNet, qualityBps);
+        return betId;
+    }
+
     /// @notice Get detailed breakdown of a bet simulation with human-readable values
     /// @param targetTimestamp The target timestamp for the prediction
     /// @param priceMin Minimum price in BPS
