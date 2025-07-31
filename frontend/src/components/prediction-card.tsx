@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input'
 import { KDEChart } from '@/components/kde-chart'
 import { PriceRangeSelector } from '@/components/price-range-selector'
 import { BetHistory } from '@/components/bet-history'
+import { BetPlacingModal } from '@/components/bet-placing-modal'
+import { BetPlacedModal } from '@/components/bet-placed-modal'
 
 interface PredictionCardProps {
   className?: string
@@ -17,9 +19,11 @@ interface PredictionCardProps {
 export function PredictionCard({ className }: PredictionCardProps) {
   const [activeTab, setActiveTab] = useState('bet')
   const [selectedRange, setSelectedRange] = useState({ min: 0.2475, max: 0.2843 })
-  const [depositAmount, setDepositAmount] = useState('0.0')
+  const [depositAmount, setDepositAmount] = useState('')
   const [resolutionDate, setResolutionDate] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000)) // Tomorrow
   const [resolutionTime, setResolutionTime] = useState('13:00')
+  const [isPlacingBet, setIsPlacingBet] = useState(false)
+  const [isBetPlaced, setIsBetPlaced] = useState(false)
 
   // Mock data for the KDE chart
   const forecastData = [
@@ -44,6 +48,33 @@ export function PredictionCard({ className }: PredictionCardProps) {
 
   const handleMaxDeposit = () => {
     setDepositAmount(balance.toString())
+  }
+
+  const handlePlaceBet = async () => {
+    if (!depositAmount || parseFloat(depositAmount) <= 0) return
+    
+    setIsPlacingBet(true)
+    
+    // Simulate bet placement process
+    setTimeout(() => {
+      setIsPlacingBet(false)
+      setIsBetPlaced(true)
+    }, 3000)
+  }
+
+  const handleViewExplorer = () => {
+    // Open transaction in explorer (mock implementation)
+    window.open('https://explorer.hedera.com', '_blank')
+  }
+
+  const closeBetPlacingModal = () => {
+    setIsPlacingBet(false)
+  }
+
+  const closeBetPlacedModal = () => {
+    setIsBetPlaced(false)
+    // Reset form
+    setDepositAmount('')
   }
 
   const calculateMultipliers = () => {
@@ -100,7 +131,8 @@ export function PredictionCard({ className }: PredictionCardProps) {
   }
 
   const { sharpness, leadTime, betQuality } = calculateMultipliers()
-  const protocolFee = parseFloat(depositAmount) * 0.005 // 0.5%
+  const protocolFee = parseFloat(depositAmount || '0') * 0.005 // 0.5%
+  const hasValidAmount = depositAmount && parseFloat(depositAmount) > 0
 
   return (
     <Card className={className}>
@@ -229,9 +261,10 @@ export function PredictionCard({ className }: PredictionCardProps) {
                   value={depositAmount}
                   onChange={(e) => setDepositAmount(e.target.value)}
                   className="pr-20"
+                  placeholder="0.0"
                 />
                 <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
-                  <AlertTriangle className="w-4 h-4 text-magenta" />
+                  {!hasValidAmount && <AlertTriangle className="w-4 h-4 text-magenta" />}
                   <span className="text-sm font-medium text-magenta">H</span>
                   <span className="text-sm text-medium-gray">HBAR</span>
                 </div>
@@ -253,9 +286,26 @@ export function PredictionCard({ className }: PredictionCardProps) {
               <span className="text-light-gray">0.5% ({protocolFee.toFixed(4)} HBAR)</span>
             </div>
 
+            {/* Warning Message */}
+            {hasValidAmount && (
+              <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-3">
+                <div className="flex items-start space-x-2">
+                  <AlertTriangle className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-yellow-100">
+                    Betting on prediction markets bears significant risk of losing funds. Only contribute what you can afford to lose.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Submit Button */}
-            <Button className="w-full bg-vibrant-purple hover:bg-vibrant-purple/90 text-white" size="lg">
-              Enter Amount
+            <Button 
+              className="w-full bg-vibrant-purple hover:bg-vibrant-purple/90 text-white" 
+              size="lg"
+              onClick={handlePlaceBet}
+              disabled={!hasValidAmount}
+            >
+              {hasValidAmount ? 'Bet' : 'Enter Amount'}
             </Button>
           </TabsContent>
 
@@ -271,6 +321,20 @@ export function PredictionCard({ className }: PredictionCardProps) {
           </TabsContent>
         </Tabs>
       </CardContent>
+
+      {/* Bet Placing Modal */}
+      <BetPlacingModal
+        isOpen={isPlacingBet}
+        onClose={closeBetPlacingModal}
+        onViewExplorer={handleViewExplorer}
+      />
+
+      {/* Bet Placed Modal */}
+      <BetPlacedModal
+        isOpen={isBetPlaced}
+        onClose={closeBetPlacedModal}
+        onViewExplorer={handleViewExplorer}
+      />
     </Card>
   )
 } 
