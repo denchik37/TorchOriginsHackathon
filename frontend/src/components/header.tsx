@@ -26,12 +26,12 @@ export function Header() {
         {/* Left side - Logo and Website link */}
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-red-500 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-vibrant-purple rounded-lg flex items-center justify-center">
               <Flame className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold">Torch</span>
+            <span className="text-xl font-bold text-light-gray">Torch</span>
           </div>
-          <Button variant="ghost" size="sm" className="text-muted-foreground">
+          <Button variant="ghost" size="sm" className="text-medium-gray hover:text-light-gray">
             Website
             <ExternalLink className="w-4 h-4 ml-1" />
           </Button>
@@ -39,13 +39,13 @@ export function Header() {
 
         {/* Right side - Navigation and Wallet */}
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="sm">
+          <Button variant="ghost" size="sm" className="text-medium-gray hover:text-light-gray">
             <Wallet className="w-4 h-4 mr-2" />
             My bets
           </Button>
 
-          <Button variant="ghost" size="sm">
-            <div className="w-4 h-4 bg-black rounded-full flex items-center justify-center mr-2">
+          <Button variant="ghost" size="sm" className="text-medium-gray hover:text-light-gray">
+            <div className="w-4 h-4 bg-magenta rounded-full flex items-center justify-center mr-2">
               <span className="text-white text-xs font-bold">H</span>
             </div>
             Hedera
@@ -54,10 +54,10 @@ export function Header() {
           {isConnected ? (
             <>
               <div className="flex items-center space-x-2">
-                <span className="text-sm font-medium">
+                <span className="text-sm font-medium text-light-gray">
                   {balance ? `${parseFloat(balance.formatted).toFixed(0)} HBAR` : '0 HBAR'}
                 </span>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="border-vibrant-purple text-vibrant-purple hover:bg-vibrant-purple hover:text-white">
                   Get
                   <ExternalLink className="w-4 h-4 ml-1" />
                 </Button>
@@ -65,8 +65,8 @@ export function Header() {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-torch-purple rounded-full flex items-center justify-center">
+                  <Button variant="ghost" className="flex items-center space-x-2 text-light-gray">
+                    <div className="w-8 h-8 bg-vibrant-purple rounded-full flex items-center justify-center">
                       <div className="w-2 h-2 bg-white rounded-full" />
                     </div>
                     <span className="text-sm font-medium">
@@ -88,7 +88,7 @@ export function Header() {
 
           <ThemeToggle />
           
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" className="text-medium-gray hover:text-light-gray">
             <Settings className="w-4 h-4" />
           </Button>
         </div>

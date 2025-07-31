@@ -72,21 +72,21 @@ export function PriceRangeSelector({
   return (
     <div className={cn("space-y-4", className)}>
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium">Select Price Range</h3>
-        <span className="text-sm text-muted-foreground">
+        <h3 className="text-lg font-medium text-light-gray">Select Price Range</h3>
+        <span className="text-sm text-medium-gray">
           Total bets: {totalBets.toLocaleString()} HBAR
         </span>
       </div>
 
       {/* Histogram */}
-      <div className="relative h-32 bg-muted rounded-lg p-4">
+      <div className="relative h-32 bg-dark-slate rounded-lg p-4">
         <div className="flex items-end justify-between h-full space-x-1">
           {histogramData.map((bucket, index) => (
             <div
               key={index}
               className={cn(
-                "flex-1 bg-torch-purple/30 rounded-t transition-all duration-200",
-                bucket.isSelected && "bg-torch-purple"
+                "flex-1 bg-vibrant-purple/30 rounded-t transition-all duration-200",
+                bucket.isSelected && "bg-vibrant-purple"
               )}
               style={{
                 height: `${(bucket.amount / maxBetAmount) * 100}%`,
@@ -98,35 +98,35 @@ export function PriceRangeSelector({
 
         {/* Current price indicator */}
         <div
-          className="absolute top-0 bottom-0 w-0.5 bg-white"
+          className="absolute top-0 bottom-0 w-0.5 bg-bright-green"
           style={{
             left: `${((currentPrice - minPrice) / (maxPrice - minPrice)) * 100}%`
           }}
         >
-          <div className="absolute -top-1 -left-1 w-3 h-3 bg-white rounded-full border-2 border-gray-800" />
+          <div className="absolute -top-1 -left-1 w-3 h-3 bg-bright-green rounded-full border-2 border-dark-slate" />
         </div>
 
         {/* Selected range indicators */}
         <div
-          className="absolute top-0 bottom-0 w-0.5 bg-torch-green"
+          className="absolute top-0 bottom-0 w-0.5 bg-vibrant-purple"
           style={{
             left: `${((selectedMin - minPrice) / (maxPrice - minPrice)) * 100}%`
           }}
         >
-          <div className="absolute -top-1 -left-1 w-3 h-3 bg-torch-green rounded-full" />
+          <div className="absolute -top-1 -left-1 w-3 h-3 bg-vibrant-purple rounded-full" />
         </div>
         <div
-          className="absolute top-0 bottom-0 w-0.5 bg-torch-green"
+          className="absolute top-0 bottom-0 w-0.5 bg-vibrant-purple"
           style={{
             left: `${((selectedMax - minPrice) / (maxPrice - minPrice)) * 100}%`
           }}
         >
-          <div className="absolute -top-1 -left-1 w-3 h-3 bg-torch-green rounded-full" />
+          <div className="absolute -top-1 -left-1 w-3 h-3 bg-vibrant-purple rounded-full" />
         </div>
       </div>
 
       {/* Price labels */}
-      <div className="flex justify-between text-xs text-muted-foreground">
+      <div className="flex justify-between text-xs text-medium-gray">
         <span>${minPrice.toFixed(2)}</span>
         <span>${currentPrice.toFixed(4)}</span>
         <span>${maxPrice.toFixed(2)}</span>
@@ -135,32 +135,32 @@ export function PriceRangeSelector({
       {/* Range inputs */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-2">Min Price</label>
+          <label className="block text-sm font-medium mb-2 text-light-gray">Min Price</label>
           <input
             type="number"
             step="0.0001"
             value={selectedMin.toFixed(4)}
             onChange={(e) => handleMinChange(parseFloat(e.target.value) || selectedMin)}
-            className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm"
+            className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm text-light-gray"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-2">Max Price</label>
+          <label className="block text-sm font-medium mb-2 text-light-gray">Max Price</label>
           <input
             type="number"
             step="0.0001"
             value={selectedMax.toFixed(4)}
             onChange={(e) => handleMaxChange(parseFloat(e.target.value) || selectedMax)}
-            className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm"
+            className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm text-light-gray"
           />
         </div>
       </div>
 
       {/* Selected range display */}
-      <div className="p-3 bg-muted rounded-lg">
+      <div className="p-3 bg-dark-slate rounded-lg">
         <div className="flex justify-between items-center">
-          <span className="text-sm font-medium">Selected Range:</span>
-          <span className="text-sm">
+          <span className="text-sm font-medium text-light-gray">Selected Range:</span>
+          <span className="text-sm text-light-gray">
             ${selectedMin.toFixed(4)} - ${selectedMax.toFixed(4)}
           </span>
         </div>

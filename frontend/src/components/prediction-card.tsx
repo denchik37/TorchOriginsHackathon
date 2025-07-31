@@ -62,18 +62,18 @@ export function PredictionCard({ className }: PredictionCardProps) {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <span className="text-sm bg-muted px-2 py-1 rounded">Crypto</span>
-            <span className="text-sm text-muted-foreground">{activeBets} active bets</span>
+            <span className="text-sm bg-dark-slate px-2 py-1 rounded text-light-gray">Crypto</span>
+            <span className="text-sm text-medium-gray">{activeBets} active bets</span>
           </div>
         </div>
         
         <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-black rounded-full flex items-center justify-center">
+          <div className="w-12 h-12 bg-magenta rounded-full flex items-center justify-center">
             <span className="text-white text-xl font-bold">H</span>
           </div>
           <div>
-            <h2 className="text-2xl font-bold">Predict HBAR token price in USD</h2>
-            <div className="flex items-center space-x-2 text-muted-foreground">
+            <h2 className="text-2xl font-bold text-light-gray">Predict HBAR token price in USD</h2>
+            <div className="flex items-center space-x-2 text-medium-gray">
               <span>Current price: ${currentPrice}</span>
               <ExternalLink className="w-4 h-4" />
             </div>
@@ -138,26 +138,26 @@ export function PredictionCard({ className }: PredictionCardProps) {
 
             {/* Bet Quality Multipliers */}
             <div className="space-y-3">
-              <h3 className="text-lg font-medium">Bet Quality</h3>
+              <h3 className="text-lg font-medium text-light-gray">Bet Quality</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span>Sharpness:</span>
-                  <span className="text-torch-red">{sharpness}x (10..20%)</span>
+                  <span className="text-medium-gray">Sharpness:</span>
+                  <span className="text-bright-green">{sharpness}x (10..20%)</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Lead time:</span>
-                  <span className="text-torch-red">{leadTime}x (2..4 days)</span>
+                  <span className="text-medium-gray">Lead time:</span>
+                  <span className="text-bright-green">{leadTime}x (2..4 days)</span>
                 </div>
                 <div className="flex justify-between font-medium">
-                  <span>Bet quality:</span>
-                  <span className="text-torch-red">{betQuality}x (weight)</span>
+                  <span className="text-medium-gray">Bet quality:</span>
+                  <span className="text-bright-green">{betQuality}x (weight)</span>
                 </div>
               </div>
             </div>
 
             {/* Deposit Amount */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Deposit amount</label>
+              <label className="text-sm font-medium text-light-gray">Deposit amount</label>
               <div className="relative">
                 <Input
                   type="number"
@@ -166,16 +166,16 @@ export function PredictionCard({ className }: PredictionCardProps) {
                   className="pr-20"
                 />
                 <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
-                  <AlertTriangle className="w-4 h-4 text-torch-red" />
-                  <span className="text-sm font-medium">H</span>
-                  <span className="text-sm">HBAR</span>
+                  <AlertTriangle className="w-4 h-4 text-magenta" />
+                  <span className="text-sm font-medium text-magenta">H</span>
+                  <span className="text-sm text-medium-gray">HBAR</span>
                 </div>
               </div>
               <div className="flex justify-between text-sm">
-                <span>Balance: {balance}</span>
+                <span className="text-medium-gray">Balance: {balance}</span>
                 <button
                   onClick={handleMaxDeposit}
-                  className="text-torch-purple hover:underline"
+                  className="text-vibrant-purple hover:underline"
                 >
                   Use MAX
                 </button>
@@ -184,12 +184,12 @@ export function PredictionCard({ className }: PredictionCardProps) {
 
             {/* Protocol Fee */}
             <div className="flex justify-between text-sm">
-              <span>Protocol fee:</span>
-              <span>0.5% ({protocolFee.toFixed(4)} HBAR)</span>
+              <span className="text-medium-gray">Protocol fee:</span>
+              <span className="text-light-gray">0.5% ({protocolFee.toFixed(4)} HBAR)</span>
             </div>
 
             {/* Submit Button */}
-            <Button variant="torch" className="w-full" size="lg">
+            <Button className="w-full bg-vibrant-purple hover:bg-vibrant-purple/90 text-white" size="lg">
               Enter Amount
             </Button>
           </TabsContent>

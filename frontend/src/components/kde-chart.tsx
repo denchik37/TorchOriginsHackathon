@@ -34,7 +34,7 @@ export function KDEChart({ data, currentPrice, className }: KDEChartProps) {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
-        <div className="bg-black/90 text-white p-3 rounded-lg border border-gray-600 shadow-lg">
+        <div className="bg-dark-slate text-light-gray p-3 rounded-lg border border-dark-slate shadow-lg">
           <p className="font-medium">Date: {data.date}</p>
           <p className="text-sm">Price: ${data.price.toFixed(4)}</p>
           <p className="text-sm">Confidence: {data.confidence}%</p>
@@ -46,7 +46,7 @@ export function KDEChart({ data, currentPrice, className }: KDEChartProps) {
 
   return (
     <div className={cn("w-full h-64", className)}>
-      <div className="text-sm text-muted-foreground mb-2">
+      <div className="text-sm text-medium-gray mb-2">
         Hover to see confidence
       </div>
       <ResponsiveContainer width="100%" height="100%">
@@ -62,20 +62,20 @@ export function KDEChart({ data, currentPrice, className }: KDEChartProps) {
         >
           <defs>
             <linearGradient id="colorConfidence" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
-              <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.1}/>
+              <stop offset="5%" stopColor="#5E2DE3" stopOpacity={0.8}/>
+              <stop offset="95%" stopColor="#5E2DE3" stopOpacity={0.1}/>
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#1C1C1E" />
           <XAxis 
             dataKey="date" 
-            stroke="#9CA3AF"
+            stroke="#8E8E93"
             fontSize={12}
             tickLine={false}
             axisLine={false}
           />
           <YAxis 
-            stroke="#9CA3AF"
+            stroke="#8E8E93"
             fontSize={12}
             tickLine={false}
             axisLine={false}
@@ -86,7 +86,7 @@ export function KDEChart({ data, currentPrice, className }: KDEChartProps) {
           <Area
             type="monotone"
             dataKey="price"
-            stroke="#3B82F6"
+            stroke="#5E2DE3"
             strokeWidth={2}
             fill="url(#colorConfidence)"
             fillOpacity={0.6}
@@ -95,7 +95,7 @@ export function KDEChart({ data, currentPrice, className }: KDEChartProps) {
           <Area
             type="monotone"
             dataKey={() => currentPrice}
-            stroke="#EF4444"
+            stroke="#34C759"
             strokeWidth={2}
             strokeDasharray="5 5"
             fill="none"
@@ -106,10 +106,10 @@ export function KDEChart({ data, currentPrice, className }: KDEChartProps) {
       
       {/* Confidence indicator */}
       {hoveredPoint && (
-        <div className="mt-2 p-2 bg-muted rounded text-sm">
+        <div className="mt-2 p-2 bg-dark-slate rounded text-sm">
           <div className="flex justify-between">
-            <span>Confidence</span>
-            <span className="font-medium">{hoveredPoint.confidence}%</span>
+            <span className="text-medium-gray">Confidence</span>
+            <span className="font-medium text-light-gray">{hoveredPoint.confidence}%</span>
           </div>
         </div>
       )}

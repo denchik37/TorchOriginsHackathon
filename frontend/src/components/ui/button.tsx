@@ -18,9 +18,9 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        torch: "bg-torch-purple text-white hover:bg-torch-purpleHover",
-        success: "bg-torch-green text-white hover:bg-torch-green/90",
-        warning: "bg-torch-orange text-white hover:bg-torch-orange/90",
+        torch: "bg-vibrant-purple text-white hover:bg-vibrant-purple/90",
+        success: "bg-bright-green text-white hover:bg-bright-green/90",
+        warning: "bg-magenta text-white hover:bg-magenta/90",
       },
       size: {
         default: "h-10 px-4 py-2",
