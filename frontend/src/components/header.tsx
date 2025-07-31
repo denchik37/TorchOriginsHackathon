@@ -32,9 +32,11 @@ export function Header() {
             </div>
             <span className="text-xl font-bold text-light-gray">Torch</span>
           </div>
-          <Button variant="ghost" size="sm" className="text-medium-gray hover:text-light-gray">
-            Website
-            <ExternalLink className="w-4 h-4 ml-1" />
+          <Button asChild variant="ghost" size="sm" className="text-medium-gray hover:text-light-gray">
+            <a href="https://torch.bet/" target="_blank">
+              Website
+              <ExternalLink className="w-4 h-4 ml-1" />
+            </a>
           </Button>
         </div>
 
