@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { formatAddress } from '@/lib/utils'
+import Link from 'next/link'
 
 export function Header() {
   const { address, isConnected } = useAccount()
@@ -39,10 +40,12 @@ export function Header() {
 
         {/* Right side - Navigation and Wallet */}
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="sm" className="text-medium-gray hover:text-light-gray">
-            <Wallet className="w-4 h-4 mr-2" />
-            My bets
-          </Button>
+          <Link href="/my-bets">
+            <Button variant="ghost" size="sm" className="text-medium-gray hover:text-light-gray">
+              <Wallet className="w-4 h-4 mr-2" />
+              My bets
+            </Button>
+          </Link>
 
           <Button variant="ghost" size="sm" className="text-medium-gray hover:text-light-gray">
             <div className="w-4 h-4 bg-magenta rounded-full flex items-center justify-center mr-2">
