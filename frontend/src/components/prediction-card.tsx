@@ -18,7 +18,7 @@ export function PredictionCard({ className }: PredictionCardProps) {
   const [activeTab, setActiveTab] = useState('bet')
   const [selectedRange, setSelectedRange] = useState({ min: 0.2475, max: 0.2843 })
   const [depositAmount, setDepositAmount] = useState('0.0')
-  const [resolutionDate, setResolutionDate] = useState('Aug 1')
+  const [resolutionDate, setResolutionDate] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000)) // Tomorrow
   const [resolutionTime, setResolutionTime] = useState('13:00')
 
   // Mock data for the KDE chart
@@ -52,6 +52,51 @@ export function PredictionCard({ className }: PredictionCardProps) {
     const leadTime = 1.5 // Based on time to resolution
     const betQuality = sharpness * leadTime
     return { sharpness, leadTime, betQuality }
+  }
+
+  // Date manipulation functions
+  const incrementDate = () => {
+    const newDate = new Date(resolutionDate)
+    newDate.setDate(newDate.getDate() + 1)
+    setResolutionDate(newDate)
+  }
+
+  const decrementDate = () => {
+    const newDate = new Date(resolutionDate)
+    newDate.setDate(newDate.getDate() - 1)
+    // Don't allow dates in the past
+    if (newDate > new Date()) {
+      setResolutionDate(newDate)
+    }
+  }
+
+  // Time manipulation functions
+  const incrementTime = () => {
+    const [hours, minutes] = resolutionTime.split(':').map(Number)
+    let newHours = hours + 1
+    if (newHours >= 24) {
+      newHours = 0
+    }
+    setResolutionTime(`${newHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`)
+  }
+
+  const decrementTime = () => {
+    const [hours, minutes] = resolutionTime.split(':').map(Number)
+    let newHours = hours - 1
+    if (newHours < 0) {
+      newHours = 23
+    }
+    setResolutionTime(`${newHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`)
+  }
+
+  // Format date for display
+  const formatDate = (date: Date) => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    return months[date.getMonth()]
+  }
+
+  const formatDay = (date: Date) => {
+    return date.getDate().toString()
   }
 
   const { sharpness, leadTime, betQuality } = calculateMultipliers()
@@ -92,19 +137,29 @@ export function PredictionCard({ className }: PredictionCardProps) {
           <TabsContent value="bet" className="space-y-6">
             {/* Resolution Time Selection */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Select Resolution Time</h3>
+              <h3 className="text-lg font-medium">Select resolution time</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Date</label>
                   <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="icon" className="w-8 h-8">
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      className="w-8 h-8 rounded-lg"
+                      onClick={decrementDate}
+                    >
                       <Minus className="w-4 h-4" />
                     </Button>
-                    <div className="flex-1 text-center">
-                      <div className="font-medium">{resolutionDate}</div>
-                      <div className="text-sm text-muted-foreground">2025</div>
+                    <div className="flex-1 text-center bg-background border rounded-lg py-3">
+                      <div className="text-xl font-bold">{formatDate(resolutionDate)} {formatDay(resolutionDate)}</div>
+                      <div className="text-sm text-muted-foreground">{resolutionDate.getFullYear()}</div>
                     </div>
-                    <Button variant="outline" size="icon" className="w-8 h-8">
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      className="w-8 h-8 rounded-lg"
+                      onClick={incrementDate}
+                    >
                       <Plus className="w-4 h-4" />
                     </Button>
                   </div>
@@ -112,14 +167,24 @@ export function PredictionCard({ className }: PredictionCardProps) {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Time</label>
                   <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="icon" className="w-8 h-8">
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      className="w-8 h-8 rounded-lg"
+                      onClick={decrementTime}
+                    >
                       <Minus className="w-4 h-4" />
                     </Button>
-                    <div className="flex-1 text-center">
-                      <div className="font-medium">{resolutionTime}</div>
+                    <div className="flex-1 text-center bg-background border rounded-lg py-3">
+                      <div className="text-xl font-bold">{resolutionTime}</div>
                       <div className="text-sm text-muted-foreground">UTC</div>
                     </div>
-                    <Button variant="outline" size="icon" className="w-8 h-8">
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      className="w-8 h-8 rounded-lg"
+                      onClick={incrementTime}
+                    >
                       <Plus className="w-4 h-4" />
                     </Button>
                   </div>
@@ -196,7 +261,6 @@ export function PredictionCard({ className }: PredictionCardProps) {
 
           <TabsContent value="forecast" className="space-y-4">
             <KDEChart
-              data={forecastData}
               currentPrice={currentPrice}
               className="h-80"
             />
