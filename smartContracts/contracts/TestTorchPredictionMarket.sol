@@ -57,13 +57,47 @@ contract TestTorchPredictionMarket {
         address indexed bettor,
         uint256 bucket,
         uint256 stake,
-        uint256 qualityBps
+        uint256 priceMin,
+        uint256 priceMax,
+        uint256 targetTimestamp
     );
     event FeeCollected(uint256 amount);
 
     constructor() {
         // Record contract deployment as the start of Day 0
         startTimestamp = block.timestamp;
+    }
+
+    /// @notice Helper function to create a bet and emit event to reduce stack usage
+    function _createBet(
+        address bettor,
+        uint256 targetTimestamp,
+        uint256 priceMin,
+        uint256 priceMax,
+        uint256 stakeNet,
+        uint256 qualityBps,
+        uint256 weight
+    ) private returns (uint256) {
+        uint256 betId = nextBetId++;
+        uint256 bucket = bucketIndex(targetTimestamp);
+        
+        bets[betId] = Bet({
+            bettor: bettor,
+            targetTimestamp: targetTimestamp,
+            priceMin: priceMin,
+            priceMax: priceMax,
+            stake: stakeNet,
+            qualityBps: qualityBps,
+            weight: weight,
+            finalized: false,
+            claimed: false
+        });
+
+        totalStakedInBucket[bucket] += stakeNet;
+        totalWeightInBucket[bucket] += weight;
+
+        emit BetPlaced(betId, bettor, bucket, stakeNet, priceMin, priceMax, targetTimestamp);
+        return betId;
     }
 
     /// @notice Map a future timestamp to a 24 h bucket since startTimestamp
@@ -82,42 +116,16 @@ contract TestTorchPredictionMarket {
         require(priceMin < priceMax, "invalid price range");
         require(msg.value > 0, "stake must be > 0");
 
-        // Deduct protocol fee
-        uint256 fee = (msg.value * FEE_BPS) / BPS_DENOM;
-        uint256 stakeNet = msg.value - fee;
-        emit FeeCollected(fee);
+        // Calculate fee and net stake
+        uint256 stakeNet = msg.value - ((msg.value * FEE_BPS) / BPS_DENOM);
+        emit FeeCollected((msg.value * FEE_BPS) / BPS_DENOM);
 
-        // Compute bet quality (sharpness × time) using fixed price
-        uint256 sharpBps = getSharpnessMultiplier(priceMin, priceMax);
-        uint256 timeBps  = getTimeMultiplier(targetTimestamp);
-        uint256 qualityBps = (sharpBps * timeBps) / BPS_DENOM;
-
-        // Compute weight as (stake × quality)
+        // Compute bet quality and weight in one step
+        uint256 qualityBps = (getSharpnessMultiplier(priceMin, priceMax) * getTimeMultiplier(targetTimestamp)) / BPS_DENOM;
         uint256 weight = (stakeNet * qualityBps) / BPS_DENOM;
 
-        // Determine which day‐bucket your bet belongs to
-        uint256 bucket = bucketIndex(targetTimestamp);
-
-        // Update pool totals
-        totalStakedInBucket[bucket] += stakeNet;
-        totalWeightInBucket[bucket] += weight;
-
-        // Store the bet
-        uint256 betId = nextBetId++;
-        bets[betId] = Bet({
-            bettor: msg.sender,
-            targetTimestamp: targetTimestamp,
-            priceMin: priceMin,
-            priceMax: priceMax,
-            stake: stakeNet,
-            qualityBps: qualityBps,
-            weight: weight,
-            finalized: false,
-            claimed: false
-        });
-
-        emit BetPlaced(betId, msg.sender, bucket, stakeNet, qualityBps);
-        return betId;
+        // Create bet using helper function
+        return _createBet(msg.sender, targetTimestamp, priceMin, priceMax, stakeNet, qualityBps, weight);
     }
 
     /// @notice Compute the sharpness multiplier (in BPS) based on the price range width,
@@ -244,6 +252,7 @@ contract TestTorchPredictionMarket {
 
         // Calculate bucket
         bucket = bucketIndex(targetTimestamp);
+        
 
         return (fee, stakeNet, sharpnessBps, timeBps, qualityBps, weight, bucket, true, "");
     }
@@ -264,41 +273,15 @@ contract TestTorchPredictionMarket {
         require(priceMin < priceMax, "invalid price range");
         require(stakeAmount > 0, "stake must be > 0");
 
-        // Calculate fee and net stake (same logic as placeBet)
-        uint256 fee = (stakeAmount * FEE_BPS) / BPS_DENOM;
-        uint256 stakeNet = stakeAmount - fee;
+        // Calculate fee and net stake
+        uint256 stakeNet = stakeAmount - ((stakeAmount * FEE_BPS) / BPS_DENOM);
 
-        // Compute bet quality (sharpness × time) using fixed price
-        uint256 sharpBps = getSharpnessMultiplier(priceMin, priceMax);
-        uint256 timeBps  = getTimeMultiplier(targetTimestamp);
-        uint256 qualityBps = (sharpBps * timeBps) / BPS_DENOM;
-
-        // Compute weight as (stake × quality)
+        // Compute bet quality and weight in one step
+        uint256 qualityBps = (getSharpnessMultiplier(priceMin, priceMax) * getTimeMultiplier(targetTimestamp)) / BPS_DENOM;
         uint256 weight = (stakeNet * qualityBps) / BPS_DENOM;
 
-        // Determine which day‐bucket your bet belongs to
-        uint256 bucket = bucketIndex(targetTimestamp);
-
-        // Update pool totals
-        totalStakedInBucket[bucket] += stakeNet;
-        totalWeightInBucket[bucket] += weight;
-
-        // Store the bet
-        uint256 betId = nextBetId++;
-        bets[betId] = Bet({
-            bettor: msg.sender,
-            targetTimestamp: targetTimestamp,
-            priceMin: priceMin,
-            priceMax: priceMax,
-            stake: stakeNet,
-            qualityBps: qualityBps,
-            weight: weight,
-            finalized: false,
-            claimed: false
-        });
-
-        emit BetPlaced(betId, msg.sender, bucket, stakeNet, qualityBps);
-        return betId;
+        // Create bet using helper function
+        return _createBet(msg.sender, targetTimestamp, priceMin, priceMax, stakeNet, qualityBps, weight);
     }
 
     /// @notice Get detailed breakdown of a bet simulation with human-readable values
