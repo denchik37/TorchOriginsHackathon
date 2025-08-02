@@ -11,8 +11,27 @@ if (!projectId) {
   throw new Error('NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID is not defined. Please set it in .env.local')
 }
 
+// Define Hedera Testnet chain
+export const hederaTestnet = {
+  id: 296,
+  name: 'Hedera Testnet',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'HBAR',
+    symbol: 'HBAR',
+  },
+  rpcUrls: {
+    default: { http: ['https://testnet.hashio.io/api'] },
+    public: { http: ['https://testnet.hashio.io/api'] },
+  },
+  blockExplorers: {
+    default: { name: 'HashScan', url: 'https://hashscan.io/testnet' },
+  },
+  testnet: true,
+} as const satisfies Chain
+
 // Define supported networks, explicitly typed as a non-empty array of Chains
-export const networks: [Chain, ...Chain[]] = [mainnet, arbitrum]
+export const networks: [Chain, ...Chain[]] = [mainnet, arbitrum, hederaTestnet]
 
 // Create the Wagmi adapter instance
 export const wagmiAdapter = new WagmiAdapter({
