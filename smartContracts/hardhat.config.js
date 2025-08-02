@@ -15,6 +15,18 @@ task("deploy-contract", async () => {
   return deployContract();
 });
 
+task("deploy-test-torch", async () => {
+  const deployTestTorchPredictionMarket = require("./scripts/deployTestTorchPredictionMarket");
+  return deployTestTorchPredictionMarket();
+});
+
+task("interact-test-torch", "Interact with deployed TestTorchPredictionMarket contract")
+  .addParam("contractAddress", "The address of the deployed contract")
+  .setAction(async (taskArgs) => {
+    const interactWithTestTorch = require("./scripts/interactWithTestTorch");
+    return interactWithTestTorch(taskArgs.contractAddress);
+  });
+
 task("contract-view-call", "Make a view call to a deployed contract")
   .addParam("contractAddress", "The address of the deployed contract")
   .setAction(async (taskArgs) => {
@@ -28,6 +40,30 @@ task("contract-call", "Make a call to a deployed contract")
   .setAction(async (taskArgs) => {
     const contractCall = require("./scripts/contractCall");
     return contractCall(taskArgs.contractAddress, taskArgs.msg);
+  });
+
+task("place-bet", "Place a bet using placeBetWithoutValue")
+  .addParam("contractAddress", "The address of the deployed contract")
+  .addParam("targetTimestamp", "Target timestamp for the prediction")
+  .addParam("priceMin", "Minimum price in BPS")
+  .addParam("priceMax", "Maximum price in BPS")
+  .addParam("stakeAmount", "Stake amount in wei")
+  .setAction(async (taskArgs) => {
+    const placeBetWithoutValue = require("./scripts/placeBetWithoutValue");
+    return placeBetWithoutValue(
+      taskArgs.contractAddress,
+      taskArgs.targetTimestamp,
+      taskArgs.priceMin,
+      taskArgs.priceMax,
+      taskArgs.stakeAmount
+    );
+  });
+
+task("test-place-bet", "Test placeBetWithoutValue with default parameters")
+  .addParam("contractAddress", "The address of the deployed contract")
+  .setAction(async (taskArgs) => {
+    const testPlaceBet = require("./scripts/testPlaceBet");
+    return testPlaceBet(taskArgs.contractAddress);
   });
 
 /** @type import('hardhat/config').HardhatUserConfig */

@@ -60,15 +60,15 @@ export function BetHistory({ className }: BetHistoryProps) {
         <table className="w-full">
           <thead>
             <tr className="border-b border-border">
-              <th className="text-left py-3 px-4 font-medium text-muted-foreground">User</th>
-              <th className="text-left py-3 px-4 font-medium text-muted-foreground">Amount</th>
-              <th className="text-left py-3 px-4 font-medium text-muted-foreground">Range</th>
-              <th className="text-left py-3 px-4 font-medium text-muted-foreground">Date, UTC</th>
+              <th className="text-left py-3 px-4 font-medium text-medium-gray">User</th>
+              <th className="text-left py-3 px-4 font-medium text-medium-gray">Amount</th>
+              <th className="text-left py-3 px-4 font-medium text-medium-gray">Range</th>
+              <th className="text-left py-3 px-4 font-medium text-medium-gray">Date, UTC</th>
             </tr>
           </thead>
           <tbody>
             {mockBetHistory.map((bet) => (
-              <tr key={bet.id} className="border-b border-border/50 hover:bg-muted/50">
+              <tr key={bet.id} className="border-b border-border/50 hover:bg-dark-slate/50">
                 <td className="py-3 px-4">
                   <div className="flex items-center space-x-3">
                     <Avatar className="w-8 h-8">
@@ -76,12 +76,12 @@ export function BetHistory({ className }: BetHistoryProps) {
                         {bet.avatar}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-sm font-mono">{bet.user}</span>
+                    <span className="text-sm font-mono text-light-gray">{bet.user}</span>
                   </div>
                 </td>
-                <td className="py-3 px-4 text-sm">{bet.amount}</td>
-                <td className="py-3 px-4 text-sm">{bet.range}</td>
-                <td className="py-3 px-4 text-sm text-muted-foreground">{bet.date}</td>
+                <td className="py-3 px-4 text-sm text-light-gray">{bet.amount}</td>
+                <td className="py-3 px-4 text-sm text-light-gray">{bet.range}</td>
+                <td className="py-3 px-4 text-sm text-medium-gray">{bet.date}</td>
               </tr>
             ))}
           </tbody>
@@ -90,11 +90,11 @@ export function BetHistory({ className }: BetHistoryProps) {
       
       {/* Pagination */}
       <div className="flex items-center justify-between mt-4">
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" className="border-vibrant-purple text-vibrant-purple hover:bg-vibrant-purple hover:text-white">
           &lt; Prev
         </Button>
-        <span className="text-sm text-muted-foreground">Page 1 of 5</span>
-        <Button variant="outline" size="sm">
+        <span className="text-sm text-medium-gray">Page 1 of 5</span>
+        <Button variant="outline" size="sm" className="border-vibrant-purple text-vibrant-purple hover:bg-vibrant-purple hover:text-white">
           Next &gt;
         </Button>
       </div>

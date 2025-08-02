@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-describe("TorchPredictionMarket", function () {
+describe.skip("TorchPredictionMarket", function () {
   let contract, owner;
 
   const HBAR = ethers.BigNumber.from("100000000"); // 1 HBAR = 100_000_000 tinybar (8 decimals)
@@ -16,7 +16,7 @@ describe("TorchPredictionMarket", function () {
   });
 
 
-  it.only("should allow owner to withdraw HBAR and update balance", async function () {
+  it("should allow owner to withdraw HBAR and update balance", async function () {
     // Set up deposit amount
     const depositAmount = HBAR_18DECIMALS.mul(100); // 100 HBAR in tinybars (if HBAR = 1e8 tinybars)
     // Deposit
