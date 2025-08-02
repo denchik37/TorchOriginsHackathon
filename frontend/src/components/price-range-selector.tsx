@@ -262,7 +262,7 @@ export function PriceRangeSelector({
             onChange={(e) =>
               handleMinChange(parseFloat(e.target.value) || selectedMin)
             }
-            className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm text-light-gray"
+            className="w-full px-3 py-2 border border-input bg-neutral-900 rounded-md text-sm text-light-gray"
           />
         </div>
         <div>
@@ -276,13 +276,13 @@ export function PriceRangeSelector({
             onChange={(e) =>
               handleMaxChange(parseFloat(e.target.value) || selectedMax)
             }
-            className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm text-light-gray"
+            className="w-full px-3 py-2 border border-input bg-neutral-900 rounded-md text-sm text-light-gray"
           />
         </div>
       </div>
 
       {/* Selected range display */}
-      <div className="bg-dark-slate rounded-lg">
+      <div className="p-3 bg-neutral-900 rounded-lg">
         <div className="flex justify-between items-center">
           <span className="text-sm font-medium text-light-gray">
             Selected Range:
