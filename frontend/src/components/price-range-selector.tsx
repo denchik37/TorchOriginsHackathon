@@ -144,7 +144,7 @@ export function PriceRangeSelector({
       {/* Histogram */}
       <div
         ref={containerRef}
-        className="relative h-40 bg-dark-slate rounded-lg p-4 cursor-crosshair"
+        className="relative h-40 bg-neutral-900 rounded-lg p-4 cursor-crosshair"
       >
         {/* Histogram bars */}
         <div className="flex items-end justify-between h-full space-x-0.5">
