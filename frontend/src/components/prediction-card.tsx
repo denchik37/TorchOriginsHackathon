@@ -292,25 +292,30 @@ export function PredictionCard({ className }: PredictionCardProps) {
             />
 
             {/* Bet Quality Multipliers */}
-            <div className="p-3 bg-neutral-900 rounded-lg space-y-3">
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-medium-gray">Sharpness:</span>
-                  <span className="text-bright-green">
-                    {sharpness}x (10..20%)
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-medium-gray">Lead time:</span>
-                  <span className="text-bright-green">
-                    {leadTime}x (2..4 days)
-                  </span>
-                </div>
-                <div className="flex justify-between font-medium">
-                  <span className="text-medium-gray">Bet quality:</span>
-                  <span className="text-bright-green">
-                    {betQuality}x (weight)
-                  </span>
+            <div className="space-y-2">
+              <span className="text-sm font-medium text-medium-gray ">
+                Bet Quality
+              </span>
+              <div className="p-3 bg-neutral-900 rounded-lg space-y-3">
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-medium-gray">Sharpness:</span>
+                    <span className="text-bright-green">
+                      {sharpness}x (10..20%)
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-medium-gray">Lead time:</span>
+                    <span className="text-bright-green">
+                      {leadTime}x (2..4 days)
+                    </span>
+                  </div>
+                  <div className="flex justify-between font-medium">
+                    <span className="text-medium-gray">Bet quality:</span>
+                    <span className="text-bright-green">
+                      {betQuality}x (weight)
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
