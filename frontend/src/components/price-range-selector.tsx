@@ -144,7 +144,7 @@ export function PriceRangeSelector({
       {/* Histogram */}
       <div
         ref={containerRef}
-        className="relative h-40 bg-neutral-900 rounded-lg p-4 cursor-crosshair"
+        className="relative h-40 bg-neutral-900 rounded-lg  cursor-crosshair"
       >
         {/* Histogram bars */}
         <div className="flex items-end justify-between h-full space-x-0.5">
@@ -192,13 +192,13 @@ export function PriceRangeSelector({
           <div className="absolute top-0 bottom-0 w-full bg-vibrant-purple" />
 
           {/* Slider handle */}
-          <div className="absolute -top-2 -left-2 w-5 h-5 bg-vibrant-purple rounded border-2 border-white shadow-lg flex items-center justify-center">
+          <div className="absolute -top-2 -left-2 w-5 h-5 bg-vibrant-purple rounded border-2 border-white shadow-lg flex items-center justify-center group">
             <div className="w-1 h-2 bg-white rounded-sm" />
-          </div>
 
-          {/* Price label */}
-          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap">
-            {selectedMin.toFixed(4)}
+            {/* Price label (hidden by default, shown on hover) */}
+            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200">
+              {selectedMin.toFixed(4)}
+            </div>
           </div>
         </div>
 
@@ -219,13 +219,13 @@ export function PriceRangeSelector({
           <div className="absolute top-0 bottom-0 w-full bg-bright-green" />
 
           {/* Slider handle */}
-          <div className="absolute -top-2 -left-2 w-5 h-5 bg-bright-green rounded border-2 border-white shadow-lg flex items-center justify-center">
+          <div className="absolute -top-2 -left-2 w-5 h-5 bg-bright-green rounded border-2 border-white shadow-lg flex items-center justify-center group">
             <div className="w-1 h-2 bg-white rounded-sm" />
-          </div>
 
-          {/* Price label */}
-          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap">
-            {selectedMax.toFixed(4)}
+            {/* Price label (hidden by default, shown on hover) */}
+            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200">
+              {selectedMax.toFixed(4)}
+            </div>
           </div>
         </div>
 
