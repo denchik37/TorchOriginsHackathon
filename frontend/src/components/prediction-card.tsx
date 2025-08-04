@@ -315,51 +315,57 @@ export function PredictionCard({ className }: PredictionCardProps) {
               </div>
             </div>
 
-            <hr className="border-white/5" />
+            <hr className="border-white/5 -mx-6" />
 
             {/* Deposit Amount */}
-            <div className="space-y-2">
+            <div>
               <label
                 htmlFor="depositNumber"
-                className="text-sm font-medium text-light-gray"
+                className="text-sm font-medium text-medium-gray"
               >
                 Deposit amount
               </label>
-              <div className="relative">
-                <Input
-                  id="depositNumber"
-                  type="number"
-                  value={depositAmount}
-                  onChange={(e) => setDepositAmount(e.target.value)}
-                  className="pr-20"
-                  placeholder="0.0"
-                />
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
-                  {!hasValidAmount && (
-                    <AlertTriangle className="w-4 h-4 text-magenta" />
-                  )}
-                  <span className="text-sm font-medium text-magenta">H</span>
-                  <span className="text-sm text-medium-gray">HBAR</span>
+
+              <div className="bg-neutral-900 p-4 rounded-lg my-2">
+                <div className="relative">
+                  <Input
+                    id="depositNumber"
+                    type="number"
+                    value={depositAmount}
+                    onChange={(e) => setDepositAmount(e.target.value)}
+                    className="pr-20"
+                    placeholder="0.0"
+                  />
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
+                    {!hasValidAmount && (
+                      <AlertTriangle className="w-4 h-4 text-magenta" />
+                    )}
+                    <span className="text-sm font-medium text-magenta">H</span>
+                    <span className="text-sm text-medium-gray">HBAR</span>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 text-sm">
+                  <span className="text-medium-gray">Balance: {balance}</span>
+                  <button
+                    type="button"
+                    onClick={handleMaxDeposit}
+                    className="text-vibrant-purple hover:underline"
+                  >
+                    Use MAX
+                  </button>
                 </div>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-medium-gray">Balance: {balance}</span>
-                <button
-                  type="button"
-                  onClick={handleMaxDeposit}
-                  className="text-vibrant-purple hover:underline"
-                >
-                  Use MAX
-                </button>
-              </div>
-            </div>
 
-            {/* Protocol Fee */}
-            <div className="flex justify-between py-3 px-4 border border-white/5 rounded-lg text-sm">
-              <span className="text-medium-gray">Protocol fee:</span>
-              <span className="text-light-gray">
-                0.5% ({protocolFee.toFixed(4)} HBAR)
-              </span>
+              {/* Protocol Fee */}
+              <div className="flex justify-between py-3 px-4 border border-white/5 rounded-lg text-sm">
+                <span className="text-medium-gray">Protocol fee:</span>
+                <span className="text-white">
+                  0.5%{" "}
+                  <span className="text-medium-gray">
+                    ({protocolFee.toFixed(4)} HBAR)
+                  </span>
+                </span>
+              </div>
             </div>
 
             {/* Warning Message */}
