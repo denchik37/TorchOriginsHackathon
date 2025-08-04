@@ -30,15 +30,9 @@ export function Header() {
         <div className="flex items-center space-x-4">
           <Link href="/" className="flex items-center space-x-2">
             <Image src="/logo.svg" alt="Logo" width={40} height={40} />
-
             <span className="text-xl font-bold text-light-gray">Torch</span>
           </Link>
-          <Button
-            asChild
-            size="sm"
-            variant="link"
-            className="text-medium-gray hover:text-light-gray"
-          >
+          <Button asChild size="sm" variant="link">
             <a
               href="https://torch.bet/"
               target="_blank"
@@ -53,21 +47,13 @@ export function Header() {
         {/* Right side - Navigation and Wallet */}
         <div className="flex items-center space-x-4">
           <Link href="/my-bets">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-medium-gray hover:text-light-gray"
-            >
+            <Button variant="ghost" size="sm">
               <Wallet className="w-4 h-4 mr-2" />
               My bets
             </Button>
           </Link>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-medium-gray hover:text-light-gray"
-          >
+          <Button variant="ghost" size="sm">
             <div className="w-4 h-4 bg-magenta rounded-full flex items-center justify-center mr-2">
               <span className="text-white text-xs font-bold">H</span>
             </div>
@@ -120,11 +106,7 @@ export function Header() {
 
           <ThemeToggle />
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-medium-gray hover:text-light-gray"
-          >
+          <Button variant="ghost" size="icon">
             <Settings className="w-4 h-4" />
           </Button>
         </div>

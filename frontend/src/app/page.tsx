@@ -6,7 +6,7 @@ export default function Home() {
     <div className="min-h-screen bg-black">
       <Header />
       <main className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-lg mx-auto">
           <PredictionCard />
         </div>
       </main>

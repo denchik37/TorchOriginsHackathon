@@ -132,9 +132,10 @@ export function PriceRangeSelector({
   return (
     <div className={cn("space-y-4", className)}>
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium text-light-gray">
+        <h3 className="text-sm font-medium text-medium-gray">
           Select Price Range
         </h3>
+
         <span className="text-sm text-medium-gray">
           Total bets: {totalBets.toLocaleString()} HBAR
         </span>
