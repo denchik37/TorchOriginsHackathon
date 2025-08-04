@@ -17,6 +17,7 @@ NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID="YOUR_WALLET_CONNECT_PROJECT_ID"
 ## Networks Supported
 
 The application now supports:
+
 - Ethereum Mainnet
 - Arbitrum
 - Hedera Testnet (default)
@@ -29,4 +30,4 @@ After setting up the environment variables:
 npm run dev
 ```
 
-The application will be available at `http://localhost:3000` 
+The application will be available at `http://localhost:3000`

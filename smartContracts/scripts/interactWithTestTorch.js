@@ -29,7 +29,9 @@ module.exports = async (contractAddress) => {
   console.log(`👤 User Address: ${wallet.address}`);
 
   // Get contract instance
-  const TestTorchPredictionMarket = await ethers.getContractFactory("TestTorchPredictionMarket");
+  const TestTorchPredictionMarket = await ethers.getContractFactory(
+    "TestTorchPredictionMarket",
+  );
   const contract = TestTorchPredictionMarket.attach(contractAddress);
 
   // Get current contract state
@@ -59,12 +61,9 @@ module.exports = async (contractAddress) => {
   console.log(`📈 Price Range: ${priceMin} - ${priceMax}`);
 
   try {
-    const tx = await contract.connect(wallet).placeBet(
-      futureTimestamp,
-      priceMin,
-      priceMax,
-      { value: betAmount }
-    );
+    const tx = await contract
+      .connect(wallet)
+      .placeBet(futureTimestamp, priceMin, priceMax, { value: betAmount });
 
     const receipt = await tx.wait();
     console.log("✅ Bet placed successfully!");
@@ -87,7 +86,9 @@ module.exports = async (contractAddress) => {
     const totalWeight = await contract.totalWeightInBucket(bucket);
 
     console.log("\n🪣 Bucket Totals:");
-    console.log(`💰 Total Staked: ${ethers.utils.formatEther(totalStaked)} ETH`);
+    console.log(
+      `💰 Total Staked: ${ethers.utils.formatEther(totalStaked)} ETH`,
+    );
     console.log(`⚖️ Total Weight: ${totalWeight}`);
 
     // Simulate another bet
@@ -100,7 +101,7 @@ module.exports = async (contractAddress) => {
       futureTimestamp + 3600, // 1 hour later
       priceMin2,
       priceMax2,
-      { value: betAmount2 }
+      { value: betAmount2 },
     );
 
     await tx2.wait();
@@ -112,13 +113,14 @@ module.exports = async (contractAddress) => {
     const nextBetId2 = await contract.nextBetId();
 
     console.log("\n🪣 Updated Bucket Totals:");
-    console.log(`💰 Total Staked: ${ethers.utils.formatEther(totalStaked2)} ETH`);
+    console.log(
+      `💰 Total Staked: ${ethers.utils.formatEther(totalStaked2)} ETH`,
+    );
     console.log(`⚖️ Total Weight: ${totalWeight2}`);
     console.log(`🆔 Next Bet ID: ${nextBetId2}`);
-
   } catch (error) {
     console.error("❌ Error placing bet:", error.message);
   }
 
   return contractAddress;
-}; 
+};

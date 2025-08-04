@@ -6,13 +6,15 @@ module.exports = async (contractAddress) => {
 
   try {
     // Get contract instance
-    const TestTorchPredictionMarket = await ethers.getContractFactory("TestTorchPredictionMarket");
+    const TestTorchPredictionMarket = await ethers.getContractFactory(
+      "TestTorchPredictionMarket",
+    );
     const contract = TestTorchPredictionMarket.attach(contractAddress);
 
     // Try to get the contract code to see if it exists
     const code = await ethers.provider.getCode(contractAddress);
     console.log(`📦 Contract code length: ${code.length}`);
-    
+
     if (code === "0x") {
       console.log("❌ No contract found at this address");
       return;
@@ -35,8 +37,7 @@ module.exports = async (contractAddress) => {
     } catch (error) {
       console.log(`❌ FEE_BPS() failed: ${error.message}`);
     }
-
   } catch (error) {
     console.log("❌ Error:", error.message);
   }
-}; 
+};

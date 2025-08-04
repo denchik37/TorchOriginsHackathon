@@ -1,6 +1,6 @@
 # Hedera Hardhat Example Project
 
-This Hedera Hardhat Example Project offers boilerplate code for testing and deploying smart contracts via Hardhat. It includes configuration for both community-hosted and local ([Hedera Local Node](https://github.com/hashgraph/hedera-local-node)) instances of the [Hedera JSON RPC Relay](https://github.com/hashgraph/hedera-json-rpc-relay). 
+This Hedera Hardhat Example Project offers boilerplate code for testing and deploying smart contracts via Hardhat. It includes configuration for both community-hosted and local ([Hedera Local Node](https://github.com/hashgraph/hedera-local-node)) instances of the [Hedera JSON RPC Relay](https://github.com/hashgraph/hedera-json-rpc-relay).
 
 :fire: Check out the step-by-step tutorial [here](https://docs.hedera.com/hedera/tutorials/smart-contracts/deploy-a-smart-contract-using-hardhat-and-hedera-json-rpc-relays).
 
@@ -11,11 +11,10 @@ This Hedera Hardhat Example Project offers boilerplate code for testing and depl
 - `/contracts` - This folder holds all the Solidity smart contract files that make up the core logic of your dApp. Contracts are written in `.sol` files.
 
 - `/test` - This folder contains test scripts that help validate your smart contracts' functionality. These tests are crucial for ensuring that your contracts behave as expected.
-  
--  `/scripts` - This folder contains essential JavaScript files for tasks such as deploying smart contracts to the Hedera network. 
+- `/scripts` - This folder contains essential JavaScript files for tasks such as deploying smart contracts to the Hedera network.
 
 - `.env.example` - This file is contains the environment variables needed by the project. Copy this file to a `.env` file and fill in the actual values before starting the development server or deploying smart contracts. To expedite your test setup and deployment, some variables are pre-filled in this example file.
-  
+
 ## Setup
 
 1. Clone this repo to your local machine:
@@ -46,11 +45,12 @@ npm install
 # runs test on default network
 npx hardhat test
 
-# runs test on testnet 
+# runs test on testnet
 npx hardhat test --network testnet
 ```
 
 Expect an output similar to the following:
+
 ```shell
   RPC
 The address 0xe0b73F64b0de6032b193648c08899f20b5A6141D has 10000000000000000000000 weibars
@@ -67,7 +67,8 @@ Contract call result: updated_msg
   4 passing (22s)
 ```
 
-7. Run the following command to deploy the smart contract. 
+7. Run the following command to deploy the smart contract.
+
 ```shell
 # deploys to the default network
 npx hardhat deploy-contract
@@ -77,15 +78,18 @@ npx hardhat deploy-contract --network testnet
 ```
 
 # Contributing
+
 Contributions are welcome. Please see the
 [contributing guide](https://github.com/hashgraph/.github/blob/main/CONTRIBUTING.md)
 to see how you can get involved.
 
 # Code of Conduct
+
 This project is governed by the
 [Contributor Covenant Code of Conduct](https://github.com/hashgraph/.github/blob/main/CODE_OF_CONDUCT.md). By
 participating, you are expected to uphold this code of conduct. Please report unacceptable behavior
 to [oss@hedera.com](mailto:oss@hedera.com).
 
 # License
+
 [Apache License 2.0](LICENSE)

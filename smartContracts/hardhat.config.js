@@ -20,7 +20,10 @@ task("deploy-test-torch", async () => {
   return deployTestTorchPredictionMarket();
 });
 
-task("interact-test-torch", "Interact with deployed TestTorchPredictionMarket contract")
+task(
+  "interact-test-torch",
+  "Interact with deployed TestTorchPredictionMarket contract",
+)
   .addParam("contractAddress", "The address of the deployed contract")
   .setAction(async (taskArgs) => {
     const interactWithTestTorch = require("./scripts/interactWithTestTorch");
@@ -55,7 +58,7 @@ task("place-bet", "Place a bet using placeBetWithoutValue")
       taskArgs.targetTimestamp,
       taskArgs.priceMin,
       taskArgs.priceMax,
-      taskArgs.stakeAmount
+      taskArgs.stakeAmount,
     );
   });
 

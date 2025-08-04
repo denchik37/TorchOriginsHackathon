@@ -6,13 +6,15 @@ module.exports = async (contractAddress) => {
 
   try {
     // Get contract instance
-    const TestTorchPredictionMarket = await ethers.getContractFactory("TestTorchPredictionMarket");
+    const TestTorchPredictionMarket = await ethers.getContractFactory(
+      "TestTorchPredictionMarket",
+    );
     const contract = TestTorchPredictionMarket.attach(contractAddress);
 
     // Check if contract exists
     const code = await ethers.provider.getCode(contractAddress);
     console.log(`📦 Contract code length: ${code.length}`);
-    
+
     if (code === "0x") {
       console.log("❌ No contract found at this address");
       console.log("💡 This might be due to:");
@@ -32,7 +34,9 @@ module.exports = async (contractAddress) => {
 
     console.log(`📅 Target Timestamp: ${targetTimestamp}`);
     console.log(`📈 Price Range: ${priceMin} - ${priceMax}`);
-    console.log(`💰 Stake Amount: ${ethers.utils.formatEther(stakeAmount)} ETH`);
+    console.log(
+      `💰 Stake Amount: ${ethers.utils.formatEther(stakeAmount)} ETH`,
+    );
 
     // Try to place the bet
     console.log("\n🚀 Attempting to place bet...");
@@ -40,23 +44,25 @@ module.exports = async (contractAddress) => {
       targetTimestamp,
       priceMin,
       priceMax,
-      stakeAmount
+      stakeAmount,
     );
 
     console.log("⏳ Waiting for transaction...");
     const receipt = await tx.wait();
-    
+
     console.log("✅ Bet placed successfully!");
     console.log(`📝 Transaction Hash: ${tx.hash}`);
     console.log(`⛽ Gas Used: ${receipt.gasUsed.toString()}`);
 
     // Try to get bet details
     try {
-      const betPlacedEvent = receipt.events?.find(event => event.event === 'BetPlaced');
+      const betPlacedEvent = receipt.events?.find(
+        (event) => event.event === "BetPlaced",
+      );
       if (betPlacedEvent) {
         const betId = betPlacedEvent.args.betId;
         console.log(`🆔 Bet ID: ${betId.toString()}`);
-        
+
         const bet = await contract.bets(betId);
         console.log("\n📋 Bet Details:");
         console.log(`👤 Bettor: ${bet.bettor}`);
@@ -71,11 +77,10 @@ module.exports = async (contractAddress) => {
     }
 
     return tx.hash;
-
   } catch (error) {
     console.log("❌ Error:", error.message);
-    
-    if (error.code === 'CALL_EXCEPTION') {
+
+    if (error.code === "CALL_EXCEPTION") {
       console.log("\n💡 Possible solutions:");
       console.log("   1. Wait a few minutes and try again");
       console.log("   2. Deploy a fresh contract");
@@ -83,4 +88,4 @@ module.exports = async (contractAddress) => {
       console.log("   4. Verify contract address is correct");
     }
   }
-}; 
+};

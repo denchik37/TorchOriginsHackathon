@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import React, { useState, useMemo, useRef, useCallback } from "react";
-import { cn } from "@/lib/utils";
+import React, { useState, useMemo, useRef, useCallback } from 'react';
+import { cn } from '@/lib/utils';
 
 interface PriceRangeSelectorProps {
   minPrice: number;
@@ -20,12 +20,8 @@ export function PriceRangeSelector({
   onRangeChange,
   className,
 }: PriceRangeSelectorProps) {
-  const [selectedMin, setSelectedMin] = useState(
-    minPrice + (maxPrice - minPrice) * 0.2
-  );
-  const [selectedMax, setSelectedMax] = useState(
-    maxPrice - (maxPrice - minPrice) * 0.2
-  );
+  const [selectedMin, setSelectedMin] = useState(minPrice + (maxPrice - minPrice) * 0.2);
+  const [selectedMax, setSelectedMax] = useState(maxPrice - (maxPrice - minPrice) * 0.2);
   const [isDraggingMin, setIsDraggingMin] = useState(false);
   const [isDraggingMax, setIsDraggingMax] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -48,8 +44,7 @@ export function PriceRangeSelector({
 
       // Create a bell curve around current price
       const betDensity = Math.exp(-Math.pow(normalizedDistance * 2, 2));
-      const betAmount =
-        Math.floor((betDensity * totalBets) / 15) + Math.random() * 30;
+      const betAmount = Math.floor((betDensity * totalBets) / 15) + Math.random() * 30;
 
       data.push({
         min: bucketMin,
@@ -128,21 +123,19 @@ export function PriceRangeSelector({
 
   React.useEffect(() => {
     if (isDraggingMin || isDraggingMax) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
       return () => {
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
       };
     }
   }, [isDraggingMin, isDraggingMax, handleMouseMove, handleMouseUp]);
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn('space-y-4', className)}>
       <div className="flex justify-between items-center">
-        <h3 className="text-sm font-medium text-medium-gray">
-          Select Price Range
-        </h3>
+        <h3 className="text-sm font-medium text-medium-gray">Select Price Range</h3>
 
         <span className="text-sm text-medium-gray">
           Total bets: {totalBets.toLocaleString()} HBAR
@@ -150,22 +143,19 @@ export function PriceRangeSelector({
       </div>
 
       {/* Histogram */}
-      <div
-        ref={containerRef}
-        className="relative h-40 bg-neutral-900 rounded-lg  cursor-crosshair"
-      >
+      <div ref={containerRef} className="relative h-40 bg-neutral-900 rounded-lg  cursor-crosshair">
         {/* Histogram bars */}
         <div className="flex items-end justify-between h-full space-x-0.5">
           {histogramData.map((bucket, index) => (
             <div
               key={index}
               className={cn(
-                "flex-1 bg-vibrant-purple/30 rounded-t transition-all duration-200",
-                bucket.isSelected && "bg-vibrant-purple"
+                'flex-1 bg-vibrant-purple/30 rounded-t transition-all duration-200',
+                bucket.isSelected && 'bg-vibrant-purple'
               )}
               style={{
                 height: `${(bucket.amount / maxBetAmount) * 100}%`,
-                minHeight: "4px",
+                minHeight: '4px',
               }}
             />
           ))}
@@ -175,9 +165,7 @@ export function PriceRangeSelector({
         <div
           className="absolute top-0 bottom-0 w-0.5 bg-bright-green pointer-events-none"
           style={{
-            left: `${
-              ((currentPrice - minPrice) / (maxPrice - minPrice)) * 100
-            }%`,
+            left: `${((currentPrice - minPrice) / (maxPrice - minPrice)) * 100}%`,
           }}
         >
           <div className="absolute -top-1 -left-1 w-3 h-3 bg-bright-green rounded-full border-2 border-dark-slate" />
@@ -186,13 +174,11 @@ export function PriceRangeSelector({
         {/* Min range slider */}
         <div
           className={cn(
-            "absolute top-0 bottom-0 w-1 cursor-ew-resize select-none",
-            isDraggingMin ? "z-20" : "z-10"
+            'absolute top-0 bottom-0 w-1 cursor-ew-resize select-none',
+            isDraggingMin ? 'z-20' : 'z-10'
           )}
           style={{
-            left: `${
-              ((selectedMin - minPrice) / (maxPrice - minPrice)) * 100
-            }%`,
+            left: `${((selectedMin - minPrice) / (maxPrice - minPrice)) * 100}%`,
           }}
           onMouseDown={(e) => handleMouseDown(e, true)}
         >
@@ -213,13 +199,11 @@ export function PriceRangeSelector({
         {/* Max range slider */}
         <div
           className={cn(
-            "absolute top-0 bottom-0 w-1 cursor-ew-resize select-none",
-            isDraggingMax ? "z-20" : "z-10"
+            'absolute top-0 bottom-0 w-1 cursor-ew-resize select-none',
+            isDraggingMax ? 'z-20' : 'z-10'
           )}
           style={{
-            left: `${
-              ((selectedMax - minPrice) / (maxPrice - minPrice)) * 100
-            }%`,
+            left: `${((selectedMax - minPrice) / (maxPrice - minPrice)) * 100}%`,
           }}
           onMouseDown={(e) => handleMouseDown(e, false)}
         >
@@ -241,12 +225,8 @@ export function PriceRangeSelector({
         <div
           className="absolute top-0 bottom-0 bg-vibrant-purple/20 pointer-events-none"
           style={{
-            left: `${
-              ((selectedMin - minPrice) / (maxPrice - minPrice)) * 100
-            }%`,
-            width: `${
-              ((selectedMax - selectedMin) / (maxPrice - minPrice)) * 100
-            }%`,
+            left: `${((selectedMin - minPrice) / (maxPrice - minPrice)) * 100}%`,
+            width: `${((selectedMax - selectedMin) / (maxPrice - minPrice)) * 100}%`,
           }}
         />
       </div>
@@ -261,10 +241,7 @@ export function PriceRangeSelector({
       {/* Range inputs */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label
-            htmlFor="minPrice"
-            className="block text-sm font-medium text-medium-gray mb-2 "
-          >
+          <label htmlFor="minPrice" className="block text-sm font-medium text-medium-gray mb-2 ">
             Min Price
           </label>
           <input
@@ -273,17 +250,12 @@ export function PriceRangeSelector({
             step="0.0001"
             min={minPrice}
             value={selectedMin.toFixed(4)}
-            onChange={(e) =>
-              handleMinChange(parseFloat(e.target.value) || selectedMin)
-            }
+            onChange={(e) => handleMinChange(parseFloat(e.target.value) || selectedMin)}
             className="w-full px-3 py-2 border border-input bg-neutral-900 rounded-md text-sm text-medium-gray"
           />
         </div>
         <div>
-          <label
-            htmlFor="maxPrice"
-            className="block text-sm font-medium text-medium-gray mb-2"
-          >
+          <label htmlFor="maxPrice" className="block text-sm font-medium text-medium-gray mb-2">
             Max Price
           </label>
           <input
@@ -292,9 +264,7 @@ export function PriceRangeSelector({
             step="0.0001"
             max={maxPrice}
             value={selectedMax.toFixed(4)}
-            onChange={(e) =>
-              handleMaxChange(parseFloat(e.target.value) || selectedMax)
-            }
+            onChange={(e) => handleMaxChange(parseFloat(e.target.value) || selectedMax)}
             className="w-full px-3 py-2 border border-input bg-neutral-900 rounded-md text-sm text-medium-gray"
           />
         </div>

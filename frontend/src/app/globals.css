@@ -30,17 +30,17 @@
     /* Charcoal Black (#111111) - Primary background */
     --background: 0 0% 7%;
     --foreground: 0 0% 92%;
-    
+
     /* Dark Slate Gray (#1C1C1E) - Main content card */
     --card: 240 2% 11%;
     --card-foreground: 0 0% 92%;
     --popover: 240 2% 11%;
     --popover-foreground: 0 0% 92%;
-    
+
     /* Vibrant Purple (#5E2DE3) - Main accent color */
     --primary: 262 76% 53%;
     --primary-foreground: 0 0% 7%;
-    
+
     /* Medium Gray (#8E8E93) - Secondary elements */
     --secondary: 240 1% 56%;
     --secondary-foreground: 0 0% 92%;
@@ -48,11 +48,11 @@
     --muted-foreground: 240 1% 56%;
     --accent: 240 1% 56%;
     --accent-foreground: 0 0% 92%;
-    
+
     /* Bright Green (#34C759) - Secondary accent */
     --destructive: 142 70% 45%;
     --destructive-foreground: 0 0% 7%;
-    
+
     /* Borders and inputs using Dark Slate Gray */
     --border: 240 2% 11%;
     --input: 240 2% 11%;
@@ -72,50 +72,50 @@
 @layer utilities {
   /* Custom dark theme colors */
   .dark .text-light-gray {
-    color: #EAEAEB;
+    color: #eaeaeb;
   }
-  
+
   .dark .bg-charcoal-black {
     background-color: #111111;
   }
-  
+
   .dark .bg-dark-slate {
-    background-color: #1C1C1E;
+    background-color: #1c1c1e;
   }
-  
+
   .dark .text-vibrant-purple {
-    color: #5E2DE3;
+    color: #5e2de3;
   }
-  
+
   .dark .bg-vibrant-purple {
-    background-color: #5E2DE3;
+    background-color: #5e2de3;
   }
-  
+
   .dark .text-medium-gray {
-    color: #8E8E93;
+    color: #8e8e93;
   }
-  
+
   .dark .text-bright-green {
-    color: #34C759;
+    color: #34c759;
   }
-  
+
   .dark .bg-bright-green {
-    background-color: #34C759;
+    background-color: #34c759;
   }
-  
+
   .dark .text-magenta {
-    color: #FF2D55;
+    color: #ff2d55;
   }
-  
+
   .dark .bg-magenta {
-    background-color: #FF2D55;
+    background-color: #ff2d55;
   }
-  
+
   .dark .border-dark-slate {
-    border-color: #1C1C1E;
+    border-color: #1c1c1e;
   }
-  
+
   .dark .border-vibrant-purple {
-    border-color: #5E2DE3;
+    border-color: #5e2de3;
   }
-} 
+}

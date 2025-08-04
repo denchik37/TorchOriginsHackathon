@@ -26,23 +26,26 @@ A modern Next.js frontend for the Torch cryptocurrency prediction market platfor
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - npm or yarn
 
 ### Installation
 
 1. **Install dependencies**:
+
    ```bash
    npm install
    ```
 
 2. **Set up environment variables**:
    Create a `.env.local` file in the root directory:
+
    ```env
    NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=your_wallet_connect_project_id
    ```
 
 3. **Run the development server**:
+
    ```bash
    npm run dev
    ```
@@ -76,26 +79,34 @@ src/
 ## Key Components
 
 ### PredictionCard
+
 The main interface component that contains:
+
 - Bet placement interface
 - Interactive price range selector
 - KDE forecast visualization
 - Bet history table
 
 ### KDEChart
+
 Interactive Kernel Density Estimation chart that:
+
 - Shows price forecasts over time
 - Displays confidence percentages on hover
 - Uses Recharts for smooth animations
 
 ### PriceRangeSelector
+
 Interactive histogram component that:
+
 - Visualizes bet distribution
 - Allows range selection with visual feedback
 - Shows current price indicator
 
 ### Header
+
 Navigation header with:
+
 - Torch branding
 - Wallet connection status
 - Theme toggle
@@ -134,4 +145,4 @@ The app uses a custom design system built on Tailwind CSS:
 
 ## License
 
-This project is part of the Torch Origins Hackathon. 
+This project is part of the Torch Origins Hackathon.

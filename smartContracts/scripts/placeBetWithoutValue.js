@@ -1,6 +1,12 @@
 const { ethers } = require("hardhat");
 
-module.exports = async (contractAddress, targetTimestamp, priceMin, priceMax, stakeAmount) => {
+module.exports = async (
+  contractAddress,
+  targetTimestamp,
+  priceMin,
+  priceMax,
+  stakeAmount,
+) => {
   // Assign the first signer
   let wallet = (await ethers.getSigners())[0];
 
@@ -13,7 +19,9 @@ module.exports = async (contractAddress, targetTimestamp, priceMin, priceMax, st
 
   try {
     // Get contract instance
-    const TestTorchPredictionMarket = await ethers.getContractFactory("TestTorchPredictionMarket");
+    const TestTorchPredictionMarket = await ethers.getContractFactory(
+      "TestTorchPredictionMarket",
+    );
     const contract = TestTorchPredictionMarket.attach(contractAddress);
 
     // Check if contract exists
@@ -27,26 +35,25 @@ module.exports = async (contractAddress, targetTimestamp, priceMin, priceMax, st
 
     // Skip simulation for now and go straight to placing the bet
     console.log("\n🚀 Placing bet directly...");
-    const tx = await contract.connect(wallet).placeBetWithoutValue(
-      targetTimestamp,
-      priceMin,
-      priceMax,
-      stakeAmount
-    );
+    const tx = await contract
+      .connect(wallet)
+      .placeBetWithoutValue(targetTimestamp, priceMin, priceMax, stakeAmount);
 
     console.log("⏳ Waiting for transaction...");
     const receipt = await tx.wait();
-    
+
     console.log("✅ Bet placed successfully!");
     console.log(`📝 Transaction Hash: ${tx.hash}`);
     console.log(`⛽ Gas Used: ${receipt.gasUsed.toString()}`);
 
     // Get the bet ID from the event
-    const betPlacedEvent = receipt.events?.find(event => event.event === 'BetPlaced');
+    const betPlacedEvent = receipt.events?.find(
+      (event) => event.event === "BetPlaced",
+    );
     if (betPlacedEvent) {
       const betId = betPlacedEvent.args.betId;
       console.log(`🆔 Bet ID: ${betId.toString()}`);
-      
+
       // Get bet details
       const bet = await contract.bets(betId);
       console.log("\n📋 Bet Details:");
@@ -61,9 +68,8 @@ module.exports = async (contractAddress, targetTimestamp, priceMin, priceMax, st
     }
 
     return tx.hash;
-
   } catch (error) {
     console.log("❌ Error placing bet:", error.message);
     throw error;
   }
-}; 
+};

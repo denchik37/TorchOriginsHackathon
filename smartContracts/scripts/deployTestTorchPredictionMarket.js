@@ -30,13 +30,16 @@ module.exports = async () => {
   // Initialize a contract factory object
   // name of contract as first parameter
   // wallet/signer used for signing the contract calls/transactions with this contract
-  const TestTorchPredictionMarket = await ethers.getContractFactory("TestTorchPredictionMarket", wallet);
-  
+  const TestTorchPredictionMarket = await ethers.getContractFactory(
+    "TestTorchPredictionMarket",
+    wallet,
+  );
+
   // Using already initialized contract factory object with our contract, we can invoke deploy function to deploy the contract.
   // No constructor parameters needed for TestTorchPredictionMarket
   console.log("🚀 Deploying contract...");
   const testTorchPredictionMarket = await TestTorchPredictionMarket.deploy();
-  
+
   console.log("⏳ Waiting for deployment transaction...");
   // We use wait to receive the transaction (deployment) receipt, which contains contractAddress
   const receipt = await testTorchPredictionMarket.deployTransaction.wait();
@@ -54,8 +57,10 @@ module.exports = async () => {
     const nextBetId = await testTorchPredictionMarket.nextBetId();
     console.log(`🆔 Next Bet ID: ${nextBetId}`);
   } catch (error) {
-    console.log("⚠️ Could not read contract state immediately (this is normal on Hedera)");
+    console.log(
+      "⚠️ Could not read contract state immediately (this is normal on Hedera)",
+    );
   }
 
   return contractAddress;
-}; 
+};

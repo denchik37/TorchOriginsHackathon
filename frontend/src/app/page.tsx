@@ -1,5 +1,5 @@
-import { Header } from "@/components/header";
-import { PredictionCard } from "@/components/prediction-card";
+import { Header } from '@/components/header';
+import { PredictionCard } from '@/components/prediction-card';
 
 export default function Home() {
   return (

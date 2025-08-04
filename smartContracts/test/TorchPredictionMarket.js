@@ -10,11 +10,12 @@ describe.skip("TorchPredictionMarket", function () {
 
   beforeEach(async function () {
     [owner] = await ethers.getSigners();
-    const TorchPredictionMarket = await ethers.getContractFactory("TorchPredictionMarket");
+    const TorchPredictionMarket = await ethers.getContractFactory(
+      "TorchPredictionMarket",
+    );
     contract = await TorchPredictionMarket.deploy();
     await contract.deployed();
   });
-
 
   it("should allow owner to withdraw HBAR and update balance", async function () {
     // Set up deposit amount
@@ -29,5 +30,4 @@ describe.skip("TorchPredictionMarket", function () {
 
     expect(balanceAfterWithdrawTinybar).to.equal(0);
   });
-
 });

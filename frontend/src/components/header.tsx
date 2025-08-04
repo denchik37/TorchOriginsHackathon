@@ -1,20 +1,20 @@
-"use client";
+'use client';
 
-import React from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { ExternalLink, Wallet, Settings, ChevronDown } from "lucide-react";
-import { useAccount, useBalance, useDisconnect } from "wagmi";
-import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
+import React from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { ExternalLink, Wallet, Settings, ChevronDown } from 'lucide-react';
+import { useAccount, useBalance, useDisconnect } from 'wagmi';
+import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/theme-toggle';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 
-import { formatAddress } from "@/lib/utils";
+import { formatAddress } from '@/lib/utils';
 
 export function Header() {
   const { address, isConnected } = useAccount();
@@ -33,11 +33,7 @@ export function Header() {
             <span className="text-xl font-bold text-light-gray">Torch</span>
           </Link>
           <Button asChild size="sm" variant="link">
-            <a
-              href="https://torch.bet/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <a href="https://torch.bet/" target="_blank" rel="noopener noreferrer">
               Website
               <ExternalLink className="w-4 h-4 ml-1" />
             </a>
@@ -64,9 +60,7 @@ export function Header() {
             <>
               <div className="flex items-center space-x-2">
                 <span className="text-sm font-medium text-light-gray">
-                  {balance
-                    ? `${parseFloat(balance.formatted).toFixed(0)} HBAR`
-                    : "0 HBAR"}
+                  {balance ? `${parseFloat(balance.formatted).toFixed(0)} HBAR` : '0 HBAR'}
                 </span>
                 <Button
                   variant="outline"
@@ -80,23 +74,16 @@ export function Header() {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="flex items-center space-x-2 text-light-gray"
-                  >
+                  <Button variant="ghost" className="flex items-center space-x-2 text-light-gray">
                     <div className="w-8 h-8 bg-vibrant-purple rounded-full flex items-center justify-center">
                       <div className="w-2 h-2 bg-white rounded-full" />
                     </div>
-                    <span className="text-sm font-medium">
-                      {formatAddress(address || "", 2)}
-                    </span>
+                    <span className="text-sm font-medium">{formatAddress(address || '', 2)}</span>
                     <ChevronDown className="w-4 h-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => disconnect()}>
-                    Disconnect
-                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => disconnect()}>Disconnect</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </>
