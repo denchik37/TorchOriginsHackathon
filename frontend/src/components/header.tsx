@@ -35,8 +35,8 @@ export function Header() {
           </Link>
           <Button
             asChild
-            variant="ghost"
             size="sm"
+            variant="link"
             className="text-medium-gray hover:text-light-gray"
           >
             <a
