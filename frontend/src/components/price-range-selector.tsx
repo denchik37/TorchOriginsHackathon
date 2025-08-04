@@ -66,12 +66,20 @@ export function PriceRangeSelector({
   const maxBetAmount = Math.max(...histogramData.map((d) => d.amount));
 
   const handleMinChange = (value: number) => {
+    if (value < minPrice) {
+      return;
+    }
+
     const newMin = Math.min(value, selectedMax - 0.01);
     setSelectedMin(newMin);
     onRangeChange(newMin, selectedMax);
   };
 
   const handleMaxChange = (value: number) => {
+    if (value > maxPrice) {
+      return;
+    }
+
     const newMax = Math.max(value, selectedMin + 0.01);
     setSelectedMax(newMax);
     onRangeChange(selectedMin, newMax);
@@ -253,44 +261,42 @@ export function PriceRangeSelector({
       {/* Range inputs */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-2 text-light-gray">
+          <label
+            htmlFor="minPrice"
+            className="block text-sm font-medium text-medium-gray mb-2 "
+          >
             Min Price
           </label>
           <input
+            id="minPrice"
             type="number"
             step="0.0001"
+            min={minPrice}
             value={selectedMin.toFixed(4)}
             onChange={(e) =>
               handleMinChange(parseFloat(e.target.value) || selectedMin)
             }
-            className="w-full px-3 py-2 border border-input bg-neutral-900 rounded-md text-sm text-light-gray"
+            className="w-full px-3 py-2 border border-input bg-neutral-900 rounded-md text-sm text-medium-gray"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-2 text-light-gray">
+          <label
+            htmlFor="maxPrice"
+            className="block text-sm font-medium text-medium-gray mb-2"
+          >
             Max Price
           </label>
           <input
+            id="maxPrice"
             type="number"
             step="0.0001"
+            max={maxPrice}
             value={selectedMax.toFixed(4)}
             onChange={(e) =>
               handleMaxChange(parseFloat(e.target.value) || selectedMax)
             }
-            className="w-full px-3 py-2 border border-input bg-neutral-900 rounded-md text-sm text-light-gray"
+            className="w-full px-3 py-2 border border-input bg-neutral-900 rounded-md text-sm text-medium-gray"
           />
-        </div>
-      </div>
-
-      {/* Selected range display */}
-      <div className="p-3 bg-neutral-900 rounded-lg">
-        <div className="flex justify-between items-center">
-          <span className="text-sm font-medium text-light-gray">
-            Selected Range:
-          </span>
-          <span className="text-sm text-light-gray">
-            ${selectedMin.toFixed(4)} - ${selectedMax.toFixed(4)}
-          </span>
         </div>
       </div>
     </div>
