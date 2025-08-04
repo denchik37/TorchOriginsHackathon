@@ -100,7 +100,9 @@ export function BetHistory({ className }: BetHistoryProps) {
         >
           &lt; Prev
         </Button>
+
         <span className="text-sm text-medium-gray">Page 1 of 5</span>
+
         <Button
           variant="outline"
           size="sm"
