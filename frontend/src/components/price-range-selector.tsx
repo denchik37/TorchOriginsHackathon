@@ -186,7 +186,7 @@ export function PriceRangeSelector({
           <div className="absolute top-0 bottom-0 w-full bg-vibrant-purple" />
 
           {/* Slider handle */}
-          <div className="absolute -top-2 -left-2 w-5 h-5 bg-vibrant-purple rounded border-2 border-white shadow-lg flex items-center justify-center group">
+          <div className="absolute top-1/2 transform -translate-y-1/2 -left-2 w-5 h-5 bg-vibrant-purple rounded border-2 border-white shadow-lg flex items-center justify-center group">
             <div className="w-1 h-2 bg-white rounded-sm" />
 
             {/* Price label (hidden by default, shown on hover) */}
@@ -211,7 +211,7 @@ export function PriceRangeSelector({
           <div className="absolute top-0 bottom-0 w-full bg-bright-green" />
 
           {/* Slider handle */}
-          <div className="absolute -top-2 -left-2 w-5 h-5 bg-bright-green rounded border-2 border-white shadow-lg flex items-center justify-center group">
+          <div className="absolute top-1/2 transform -translate-y-1/2 -left-2 w-5 h-5 bg-bright-green rounded border-2 border-white shadow-lg flex items-center justify-center group">
             <div className="w-1 h-2 bg-white rounded-sm" />
 
             {/* Price label (hidden by default, shown on hover) */}
