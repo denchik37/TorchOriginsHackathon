@@ -12,8 +12,6 @@ import {
 import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
 
-const ADMIN_EMAILS = ['balajdariussebastian@gmail.com'];
-
 export default function AdminPageWrapper() {
   return (
     <ClerkProvider>
@@ -23,11 +21,23 @@ export default function AdminPageWrapper() {
 }
 
 function AdminPage() {
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
+  const isAdmin = user?.publicMetadata?.role === 'admin';
 
-  const email = user?.primaryEmailAddress?.emailAddress;
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-black">
+        <Header />
 
-  if (email && !ADMIN_EMAILS.includes(email)) {
+        <div className="flex flex-col items-center justify-center my-12 w-full space-y-2 ">
+          <h1 className="text-2xl font-semibold text-text-high-em">Loading...</h1>
+          <p className="text-text-low-em">Please wait while we check your access permissions.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
     return (
       <div className="min-h-screen bg-black">
         <Header />
@@ -37,7 +47,7 @@ function AdminPage() {
           <p className="text-text-low-em">
             You do not have permission to access the admin dashboard.
           </p>
-          <Button variant="torch" className="w-48">
+          <Button variant="torch" className="w-48" asChild>
             <SignOutButton />
           </Button>
         </div>
@@ -66,7 +76,7 @@ function AdminPage() {
             Please sign in with an account that has admin privileges.
           </p>
 
-          <Button variant="torch" className="w-48">
+          <Button variant="torch" className="w-48" asChild>
             <SignInButton />
           </Button>
         </div>
