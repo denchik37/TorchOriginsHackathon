@@ -36,6 +36,9 @@ function AdminPage() {
   const { user, isLoaded } = useUser();
   const isAdmin = user?.publicMetadata?.role === 'admin';
 
+  console.log('User:', user);
+  console.log('isAdmin:', isAdmin);
+
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-black">
@@ -93,6 +96,7 @@ function AdminPage() {
                   <tbody>
                     {MockData.map((bet: Bet, index: number) => {
                       const key = `${bet.priceMin}-${bet.priceMax}-${bet.targetTimestamp}`;
+
                       return (
                         <tr key={key} className="border-b border-white/5 hover:bg-dark-slate/50">
                           <td className="py-3 px-4">{bet.priceMin.toFixed(2)}</td>
@@ -118,7 +122,7 @@ function AdminPage() {
                               step="0.01"
                               min="0"
                               max="100"
-                              id={`bet-weight-${useId()}`}
+                              id={`bet-weight-${key}`}
                             />
                           </td>
                         </tr>
