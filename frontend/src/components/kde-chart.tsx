@@ -160,10 +160,18 @@ export function KDEChart({ className, currentPrice }: KDEChartProps) {
       .attr("clip-path", `url(#${clipId})`);
 
     // Add more padding to the domain to "zoom out"
-    const [minTime, maxTime] = d3.extent(dataset, d => d.time);
+    const timeExtent = d3.extent(dataset, d => d.time);
+    const priceExtent = d3.extent(dataset, d => d.price);
+    
+    // Check if extents are valid
+    if (!timeExtent[0] || !timeExtent[1] || !priceExtent[0] || !priceExtent[1]) {
+      return; // Exit if we don't have valid data ranges
+    }
+    
+    const [minTime, maxTime] = timeExtent;
     const timePadding = (maxTime - minTime) * 0.2; // 20% padding
 
-    const [minPrice, maxPrice] = d3.extent(dataset, d => d.price);
+    const [minPrice, maxPrice] = priceExtent;
     const pricePadding = (maxPrice - minPrice) * 0.2; // 20% padding
 
     const x = d3.scaleLinear()
@@ -173,12 +181,14 @@ export function KDEChart({ className, currentPrice }: KDEChartProps) {
     const y = d3.scaleLinear()
       .domain([minPrice - pricePadding, maxPrice + pricePadding])
       .range([height, 0]);
-        
-    const opacityScale = d3.scaleLinear().domain(d3.extent(dataset, d => d.stake)).range([0.3, 1.0]);
+    
+    const stakeExtent = d3.extent(dataset, d => d.stake);
+    if (!stakeExtent[0] || !stakeExtent[1]) return;
+    const opacityScale = d3.scaleLinear().domain([stakeExtent[0], stakeExtent[1]]).range([0.3, 1.0]);
 
     // Simplified grid with dark theme colors
-    svg.append("g").attr("class", "grid-x").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x).tickSize(-height).tickFormat("")).selectAll("line").attr("stroke", "#374151").attr("stroke-opacity", 0.3);
-    svg.append("g").call(d3.axisLeft(y).tickSize(-width).tickFormat("")).selectAll("line").attr("stroke", "#374151").attr("stroke-opacity", 0.3);
+    svg.append("g").attr("class", "grid-x").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x).tickSize(-height).tickFormat(() => "")).selectAll("line").attr("stroke", "#374151").attr("stroke-opacity", 0.3);
+    svg.append("g").call(d3.axisLeft(y).tickSize(-width).tickFormat(() => "")).selectAll("line").attr("stroke", "#374151").attr("stroke-opacity", 0.3);
     
     // Axes with dark theme styling
     svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x).ticks(width / 80).tickSizeOuter(0))
@@ -190,16 +200,28 @@ export function KDEChart({ className, currentPrice }: KDEChartProps) {
     svg.append("text").attr("text-anchor", "middle").attr("x", width / 2).attr("y", height + margin.bottom - 5).text("Time (hours)").attr("fill", "#9CA3AF").attr("font-size", "10px");
     svg.append("text").attr("text-anchor", "middle").attr("transform", "rotate(-90)").attr("x", -height / 2).attr("y", -margin.left + 15).text("Price (USD)").attr("fill", "#9CA3AF").attr("font-size", "10px");
 
-    const densityData = d3.contourDensity().x(d => x(d.time)).y(d => y(d.price)).size([width, height]).bandwidth(25).weight(d => d.stake)(dataset);
+    // Convert dataset to the format expected by contourDensity
+    const densityPoints = dataset.map(d => [d.time, d.price] as [number, number]);
+    const densityData = d3.contourDensity()
+      .x(d => x(d[0]))
+      .y(d => y(d[1]))
+      .size([width, height])
+      .bandwidth(25)
+      .weight((d: [number, number]) => {
+        const index = densityPoints.findIndex(point => point[0] === d[0] && point[1] === d[1]);
+        return index >= 0 ? dataset[index].stake : 1;
+      })(densityPoints);
     
     // Use a more subtle color scheme for dark theme
+    const maxDensityValue = d3.max(densityData, d => d.value);
+    if (!maxDensityValue) return;
+    
     const densityColor = d3.scaleSequential(d3.interpolateBlues)
-      .domain([0, d3.max(densityData, d => d.value)]);
+      .domain([0, maxDensityValue]);
 
     chartArea.append("g").selectAll("path").data(densityData).enter().append("path").attr("d", d3.geoPath()).attr("fill", d => densityColor(d.value)).attr("fill-opacity", 0.6);
 
-    const maxDensity = d3.max(densityData, d => d.value);
-    const confidenceThreshold = maxDensity * 0.25;
+    const confidenceThreshold = maxDensityValue * 0.25;
     const confidenceContours = densityData.filter(d => d.value > confidenceThreshold);
     chartArea.append("g").selectAll("path.confidence").data(confidenceContours).enter().append("path").attr("d", d3.geoPath()).attr("fill", "rgb(34 197 94 / 0.3)").attr("stroke", "rgb(34 197 94)").attr("stroke-linejoin", "round").attr("stroke-width", 0.5);
 
@@ -249,11 +271,14 @@ export function KDEChart({ className, currentPrice }: KDEChartProps) {
       </div>`;
 
       if (nearbyPoints.length > 0) {
+         const avgPrice = d3.mean(nearbyPoints, d => d.price);
+         const avgStake = d3.mean(nearbyPoints, d => d.stake);
+         
          metricsHtml += `<div class="border-t border-neutral-600 my-2"></div>
          <div class="font-semibold text-neutral-200 mb-2">Nearby Bets (${nearbyPoints.length})</div>
          <div class="grid grid-cols-[auto,1fr] gap-x-2 gap-y-1">
-            <span class="font-medium text-neutral-400">Avg Price:</span> <span class="text-right">$${d3.mean(nearbyPoints, d => d.price).toFixed(4)}</span>
-            <span class="font-medium text-neutral-400">Avg Stake:</span> <span class="text-right">${d3.mean(nearbyPoints, d => d.stake).toFixed(0)}</span>
+            <span class="font-medium text-neutral-400">Avg Price:</span> <span class="text-right">$${avgPrice?.toFixed(4) || '0.0000'}</span>
+            <span class="font-medium text-neutral-400">Avg Stake:</span> <span class="text-right">${avgStake?.toFixed(0) || '0'}</span>
          </div>`;
       }
       metricsPanel.html(metricsHtml);
