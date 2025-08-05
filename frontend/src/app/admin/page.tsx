@@ -36,7 +36,8 @@ function AdminPage() {
   const { user, isLoaded } = useUser();
   const isAdmin = user?.publicMetadata?.role === 'admin';
 
-  console.log('User:', isAdmin);
+  console.log('User:', user);
+  console.log('isAdmin:', isAdmin);
 
   if (!isLoaded) {
     return (
