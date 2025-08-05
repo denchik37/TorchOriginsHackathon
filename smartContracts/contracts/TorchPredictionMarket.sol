@@ -62,12 +62,10 @@ contract TorchPredictionMarket is ReentrancyGuard, Ownable, Pausable {
 
     struct BucketInfo {
         uint256[] betIds;
-        uint256 price;
         uint256 totalStaked;
         uint256 totalWeight;
         uint256 totalWinningWeight;
         uint256 nextProcessIndex;
-        bool priceSet;
         bool aggregationComplete;
     }
 
@@ -76,6 +74,7 @@ contract TorchPredictionMarket is ReentrancyGuard, Ownable, Pausable {
     // ==============================================================
     mapping(uint256 => Bet) public bets;
     mapping(uint256 => BucketInfo) public buckets;    // bucket => BucketInfo
+    mapping(uint256 => uint256) public pricesAtTimestamp; // targetTimestamp => price
 
     // ==============================================================
     // |                    Events                                  |
@@ -180,7 +179,6 @@ contract TorchPredictionMarket is ReentrancyGuard, Ownable, Pausable {
      */
     function processBatch(uint256 bucket) external returns (uint256 processedCount, uint256 winningWeight) {
         BucketInfo storage bucketInfo = buckets[bucket];
-        require(bucketInfo.priceSet, "Price not set for bucket");
         require(!bucketInfo.aggregationComplete, "Aggregation already complete");
         
         uint256 startIndex = bucketInfo.nextProcessIndex;
@@ -204,9 +202,12 @@ contract TorchPredictionMarket is ReentrancyGuard, Ownable, Pausable {
             Bet storage bet = bets[betId];
             
             if (!bet.finalized) {
+                uint256 price = pricesAtTimestamp[bet.targetTimestamp];
+                require(price > 0, "Price not set for timestamp");
+                
                 bet.finalized = true;
-                bet.actualPrice = bucketInfo.price;
-                bet.won = (bucketInfo.price >= bet.priceMin && bucketInfo.price <= bet.priceMax);
+                bet.actualPrice = price;
+                bet.won = (price >= bet.priceMin && price <= bet.priceMax);
                 
                 if (bet.won) {
                     batchWinningWeight += bet.weight;
@@ -264,21 +265,28 @@ contract TorchPredictionMarket is ReentrancyGuard, Ownable, Pausable {
     // ==============================================================
 
     /**
-     * @notice Set price for a bucket and initialize aggregation (only owner)
-     * @param bucket The bucket index
+     * @notice Set prices for multiple timestamps at once (only owner)
+     * @param timestamps Array of target timestamps
+     * @param prices Array of corresponding prices
+     */
+    function setPricesForTimestamps(uint256[] calldata timestamps, uint256[] calldata prices) external onlyOwner {
+        require(timestamps.length == prices.length, "Lengths must match");
+        for (uint256 i = 0; i < timestamps.length; i++) {
+            require(prices[i] > 0, "Price must be positive");
+            pricesAtTimestamp[timestamps[i]] = prices[i];
+            emit BucketPriceSet(timestamps[i], prices[i]);
+        }
+    }
+
+    /**
+     * @notice Set price for a single timestamp (only owner)
+     * @param timestamp The target timestamp
      * @param price The actual price
      */
-    function setBucketPrice(uint256 bucket, uint256 price) external onlyOwner {
+    function setPriceForTimestamp(uint256 timestamp, uint256 price) external onlyOwner {
         require(price > 0, "Price must be positive");
-        require(!buckets[bucket].priceSet, "Price already set for bucket");
-        
-        // Initialize bucket info
-        BucketInfo storage bucketInfo = buckets[bucket];
-        bucketInfo.price = price;
-        bucketInfo.priceSet = true;
-        bucketInfo.nextProcessIndex = 0;
-        
-        emit BucketPriceSet(bucket, price);
+        pricesAtTimestamp[timestamp] = price;
+        emit BucketPriceSet(timestamp, price);
     }
 
 
@@ -496,7 +504,7 @@ contract TorchPredictionMarket is ReentrancyGuard, Ownable, Pausable {
      */
     function getBucketStats(uint256 bucket) external view returns (uint256 totalStaked, uint256 totalWeight, uint256 price) {
         BucketInfo storage bucketInfo = buckets[bucket];
-        return (bucketInfo.totalStaked, bucketInfo.totalWeight, bucketInfo.price);
+        return (bucketInfo.totalStaked, bucketInfo.totalWeight, pricesAtTimestamp[bucket]);
     }
 
     /**
@@ -504,19 +512,15 @@ contract TorchPredictionMarket is ReentrancyGuard, Ownable, Pausable {
      */
     function getBucketInfo(uint256 bucket) external view returns (
         uint256 totalBets,
-        uint256 price,
         uint256 totalWinningWeight,
         uint256 nextProcessIndex,
-        bool priceSet,
         bool aggregationComplete
     ) {
         BucketInfo storage bucketInfo = buckets[bucket];
         return (
             bucketInfo.betIds.length,
-            bucketInfo.price,
             bucketInfo.totalWinningWeight,
             bucketInfo.nextProcessIndex,
-            bucketInfo.priceSet,
             bucketInfo.aggregationComplete
         );
     }
@@ -539,9 +543,31 @@ contract TorchPredictionMarket is ReentrancyGuard, Ownable, Pausable {
         }
         
         uint256 remaining = bucketInfo.betIds.length - startIndex;
-        bool canProcessBatch = bucketInfo.priceSet && !bucketInfo.aggregationComplete && remaining > 0;
+        bool canProcessBatch = !bucketInfo.aggregationComplete && remaining > 0;
         
         return (startIndex, endIndex, remaining, canProcessBatch);
+    }
+
+    /**
+     * @notice Check if all timestamps in a bucket have prices set
+     */
+    function arePricesSetForBucket(uint256 bucket) external view returns (bool) {
+        BucketInfo storage bucketInfo = buckets[bucket];
+        for (uint256 i = 0; i < bucketInfo.betIds.length; i++) {
+            uint256 betId = bucketInfo.betIds[i];
+            Bet storage bet = bets[betId];
+            if (pricesAtTimestamp[bet.targetTimestamp] == 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * @notice Get price for a specific timestamp
+     */
+    function getPriceAtTimestamp(uint256 timestamp) external view returns (uint256) {
+        return pricesAtTimestamp[timestamp];
     }
 
     /**
