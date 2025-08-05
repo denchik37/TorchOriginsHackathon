@@ -125,10 +125,10 @@ export function KDEChart({ className, currentPrice }: KDEChartProps) {
     const processData = (rawData: any[]) => {
       const now = Date.now();
       return rawData.map(d => ({
-        time: (d.targetTimestamp * 1000 - now) / (1000 * 60 * 60),
+        time: new Date(d.targetTimestamp * 1000), // Convert seconds to Date object
         price: (d.priceMin + d.priceMax) / 2,
         stake: d.betWeight
-      })).filter(d => d.time > 0);
+      })).filter(d => d.time > new Date()); // Filter for future dates only
     };
 
     const dataset = processData(defaultData);
@@ -160,7 +160,7 @@ export function KDEChart({ className, currentPrice }: KDEChartProps) {
       .attr("clip-path", `url(#${clipId})`);
 
     // Add more padding to the domain to "zoom out"
-    const timeExtent = d3.extent(dataset, d => d.time);
+    const timeExtent = d3.extent(dataset, d => d.time.getTime());
     const priceExtent = d3.extent(dataset, d => d.price);
     
     // Check if extents are valid
@@ -174,8 +174,8 @@ export function KDEChart({ className, currentPrice }: KDEChartProps) {
     const [minPrice, maxPrice] = priceExtent;
     const pricePadding = (maxPrice - minPrice) * 0.2; // 20% padding
 
-    const x = d3.scaleLinear()
-      .domain([minTime - timePadding, maxTime + timePadding])
+    const x = d3.scaleTime()
+      .domain([new Date(minTime - timePadding), new Date(maxTime + timePadding)])
       .range([0, width]);
 
     const y = d3.scaleLinear()
@@ -191,19 +191,19 @@ export function KDEChart({ className, currentPrice }: KDEChartProps) {
     svg.append("g").call(d3.axisLeft(y).tickSize(-width).tickFormat(() => "")).selectAll("line").attr("stroke", "#374151").attr("stroke-opacity", 0.3);
     
     // Axes with dark theme styling
-    svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x).ticks(width / 80).tickSizeOuter(0))
+    svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x).ticks(width / 80).tickFormat((d: any) => d3.timeFormat("%b %d")(d)).tickSizeOuter(0))
       .selectAll("text").attr("fill", "#9CA3AF").attr("font-size", "10px");
     svg.append("g").call(d3.axisLeft(y).ticks(height / 40).tickFormat(d3.format("$.3f")))
       .selectAll("text").attr("fill", "#9CA3AF").attr("font-size", "10px");
 
     // Smaller axis labels
-    svg.append("text").attr("text-anchor", "middle").attr("x", width / 2).attr("y", height + margin.bottom - 5).text("Time (hours)").attr("fill", "#9CA3AF").attr("font-size", "10px");
+    svg.append("text").attr("text-anchor", "middle").attr("x", width / 2).attr("y", height + margin.bottom - 5).text("Date").attr("fill", "#9CA3AF").attr("font-size", "10px");
     svg.append("text").attr("text-anchor", "middle").attr("transform", "rotate(-90)").attr("x", -height / 2).attr("y", -margin.left + 15).text("Price (USD)").attr("fill", "#9CA3AF").attr("font-size", "10px");
 
     // Convert dataset to the format expected by contourDensity
-    const densityPoints = dataset.map(d => [d.time, d.price] as [number, number]);
+    const densityPoints = dataset.map(d => [d.time.getTime(), d.price] as [number, number]);
     const densityData = d3.contourDensity()
-      .x(d => x(d[0]))
+      .x(d => x(new Date(d[0])))
       .y(d => y(d[1]))
       .size([width, height])
       .bandwidth(25)
@@ -229,7 +229,9 @@ export function KDEChart({ className, currentPrice }: KDEChartProps) {
     const tooltip = d3.select(container).append("div").attr("class", "absolute z-10 p-2 text-xs text-white bg-neutral-800 rounded border border-neutral-700 pointer-events-none transition-opacity duration-200").style("opacity", 0);
     chartArea.append("g").selectAll("line").data(dataset).enter().append("line").attr("x1", d => x(d.time)).attr("y1", d => y(d.price - 0.0002)).attr("x2", d => x(d.time)).attr("y2", d => y(d.price + 0.0002)).attr("stroke", "#EF4444").attr("stroke-width", 1).attr("stroke-opacity", d => opacityScale(d.stake))
       .on("mouseover", (event, d) => {
-        tooltip.style("opacity", 1).html(`Price: $${d.price.toFixed(4)}<br>Time: ${d.time.toFixed(1)}h<br>Stake: ${d.stake.toFixed(0)}`).style("left", `${event.pageX + 10}px`).style("top", `${event.pageY - 10}px`);
+        const dateStr = d.time.toLocaleDateString();
+        const timeStr = d.time.toLocaleTimeString();
+        tooltip.style("opacity", 1).html(`Price: $${d.price.toFixed(4)}<br>Date: ${dateStr}<br>Time: ${timeStr}<br>Stake: ${d.stake.toFixed(0)}`).style("left", `${event.pageX + 10}px`).style("top", `${event.pageY - 10}px`);
       })
       .on("mouseout", () => tooltip.style("opacity", 0));
 
@@ -266,7 +268,8 @@ export function KDEChart({ className, currentPrice }: KDEChartProps) {
 
       let metricsHtml = `<div class="font-semibold text-neutral-200 mb-2">Live Metrics</div>`;
       metricsHtml += `<div class="grid grid-cols-[auto,1fr] gap-x-2 gap-y-1">
-        <span class="font-medium text-neutral-400">Time:</span> <span class="text-right">${timeVal.toFixed(1)}h</span>
+        <span class="font-medium text-neutral-400">Date:</span> <span class="text-right">${timeVal.toLocaleDateString()}</span>
+        <span class="font-medium text-neutral-400">Time:</span> <span class="text-right">${timeVal.toLocaleTimeString()}</span>
         <span class="font-medium text-neutral-400">Price:</span> <span class="text-right">$${priceVal.toFixed(4)}</span>
       </div>`;
 
@@ -289,7 +292,7 @@ export function KDEChart({ className, currentPrice }: KDEChartProps) {
   return (
     <div className={cn('w-full', className)}>
       <div className="text-xs text-neutral-400 mb-2">
-        Price prediction distribution
+        Price prediction distribution by date
       </div>
       <div ref={chartContainerRef} className="w-full h-full relative" />
     </div>
