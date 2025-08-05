@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ExternalLink, Wallet, Settings, ChevronDown } from 'lucide-react';
+import { ExternalLink, Wallet, Settings, ChevronDown, TrendingUp, TrendingDown } from 'lucide-react';
 import { useAccount, useBalance, useDisconnect } from 'wagmi';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -15,6 +15,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 import { formatAddress } from '@/lib/utils';
+import { useHbarPrice } from '@/hooks/useHbarPrice';
+import { HbarPriceDisplay } from '@/components/hbar-price-display';
 
 export function Header() {
   const { address, isConnected } = useAccount();
@@ -50,10 +52,10 @@ export function Header() {
           </Link>
 
           <Button variant="ghost" size="sm">
-            <div className="w-4 h-4 bg-magenta rounded-full flex items-center justify-center mr-2">
-              <span className="text-white text-xs font-bold">H</span>
+            <div className="flex flex-col items-start">
+              <span>Hedera</span>
+              <HbarPriceDisplay size="sm" showIcon={false} />
             </div>
-            Hedera
           </Button>
 
           {isConnected ? (

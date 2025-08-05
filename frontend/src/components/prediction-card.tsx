@@ -13,6 +13,8 @@ import { PriceRangeSelector } from '@/components/price-range-selector';
 import { BetHistory } from '@/components/bet-history';
 import { BetPlacingModal } from '@/components/bet-placing-modal';
 import { BetPlacedModal } from '@/components/bet-placed-modal';
+import { useHbarPrice } from '@/hooks/useHbarPrice';
+import { HbarPriceDisplay } from '@/components/hbar-price-display';
 
 interface PredictionCardProps {
   className?: string;
@@ -29,6 +31,8 @@ export function PredictionCard({ className }: PredictionCardProps) {
   const [resolutionTime, setResolutionTime] = useState('13:00');
   const [isPlacingBet, setIsPlacingBet] = useState(false);
   const [isBetPlaced, setIsBetPlaced] = useState(false);
+  
+  const { price: currentPrice, isLoading: priceLoading, error: priceError } = useHbarPrice();
 
   // Mock data for the KDE chart
   const forecastData = [
@@ -41,8 +45,6 @@ export function PredictionCard({ className }: PredictionCardProps) {
     { date: 'Aug 7', price: 0.2855, confidence: 58 },
     { date: 'Aug 8', price: 0.289, confidence: 55 },
   ];
-
-  const currentPrice = 0.2645;
   const totalBets = 1300;
   const activeBets = 375;
   const balance = 540;
@@ -173,7 +175,8 @@ export function PredictionCard({ className }: PredictionCardProps) {
 
             <Button asChild size="sm" variant="link" className="px-0">
               <a href="https://torch.bet/" target="_blank" rel="noopener noreferrer">
-                Current price: ${currentPrice}
+                <span>Current price: </span>
+                <HbarPriceDisplay size="sm" showIcon={false} showChange={false} />
                 <ExternalLink className="w-4 h-4 ml-1" />
               </a>
             </Button>
