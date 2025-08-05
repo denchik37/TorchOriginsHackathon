@@ -23,3 +23,15 @@ export function formatCurrency(amount: number, currency: string = 'USD'): string
     currency: currency,
   }).format(amount);
 }
+
+export function formatDateUTC(date: number): string {
+  const options: Intl.DateTimeFormatOptions = {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'UTC',
+  };
+  return new Date(date * 1000).toLocaleString('en-US', options);
+}
