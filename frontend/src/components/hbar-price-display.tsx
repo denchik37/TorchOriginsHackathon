@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { TrendingUp, TrendingDown, RefreshCw } from 'lucide-react';
+import { TrendingUp, TrendingDown, RefreshCw, RotateCcw } from 'lucide-react';
 import { useHbarPrice } from '@/hooks/useHbarPrice';
 
 interface HbarPriceDisplayProps {
@@ -18,7 +18,7 @@ export function HbarPriceDisplay({
   className = '',
   size = 'md' 
 }: HbarPriceDisplayProps) {
-  const { price, priceChangePercentage24h, isLoading, error } = useHbarPrice();
+  const { price, priceChangePercentage24h, isLoading, error, isStale, retryFetch } = useHbarPrice();
 
   const sizeClasses = {
     sm: 'text-xs',
@@ -47,10 +47,17 @@ export function HbarPriceDisplay({
     );
   }
 
-  if (error) {
+  if (error && !isStale) {
     return (
       <div className={`flex items-center space-x-1 ${className}`}>
         <span className={`${sizeClasses[size]} text-red-500`}>Price unavailable</span>
+        <button
+          onClick={retryFetch}
+          className={`${iconSizes[size]} text-red-500 hover:text-red-400 transition-colors`}
+          title="Retry fetching price"
+        >
+          <RotateCcw className="w-full h-full" />
+        </button>
       </div>
     );
   }
@@ -66,11 +73,17 @@ export function HbarPriceDisplay({
           className="flex-shrink-0"
         />
       )}
-      <span className={`${sizeClasses[size]} text-light-gray`}>
+      <span className={`${sizeClasses[size]} text-light-gray ${isStale ? 'opacity-60' : ''}`}>
         ${price.toFixed(4)}
+        {isStale && (
+          <span className="text-yellow-500 ml-1 flex items-center">
+            <RefreshCw className={`${iconSizes[size]} animate-spin mr-1`} />
+            cached
+          </span>
+        )}
       </span>
       {showChange && priceChangePercentage24h !== 0 && (
-        <div className={`flex items-center space-x-1 ${priceChangePercentage24h > 0 ? 'text-green-500' : 'text-red-500'}`}>
+        <div className={`flex items-center space-x-1 ${priceChangePercentage24h > 0 ? 'text-green-500' : 'text-red-500'} ${isStale ? 'opacity-60' : ''}`}>
           {priceChangePercentage24h > 0 ? (
             <TrendingUp className={iconSizes[size]} />
           ) : (
