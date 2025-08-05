@@ -28,7 +28,7 @@ module.exports = async (address) => {
   //name of contract as first parameter
   //address of our contract
   //wallet/signer used for signing the contract calls/transactions with this contract
-  const greeter = await hre.ethers.getContractAt("Greeter", address, wallet);
+  const greeter = await ethers.getContractAt("Greeter", address, wallet);
   //using the greeter object(which is our contract) we can call functions from the contract. In this case we call greet which returns our greeting msg
   const callRes = await greeter.greet();
 

@@ -18,7 +18,7 @@
  *
  */
 
-const { ethers } = require("hardhat");
+const { ethers, network } = require("hardhat");
 
 module.exports = async () => {
   // Assign the first signer, which comes from the first privateKey from our configuration in hardhat.config.js, to a wallet variable.

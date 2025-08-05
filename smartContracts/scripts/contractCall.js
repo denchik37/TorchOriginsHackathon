@@ -30,7 +30,7 @@ module.exports = async (address, msg) => {
   //name of contract as first parameter
   //address of our contract
   //wallet/signer used for signing the contract calls/transactions with this contract
-  const greeter = await ethers.getContractAt("Greeter", address, wallet);
+  const greeter = await ethers.getContractAt("Greeter", "0x19779512622818e8eb07013f251aB11264fF79B7", wallet);
 
   //using the greeter object(which is our contract) we can call functions from the contract. In this case we call setGreeting with our new msg
   const updateTx = await greeter.setGreeting(msg);

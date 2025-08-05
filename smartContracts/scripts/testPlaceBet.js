@@ -40,11 +40,11 @@ module.exports = async (contractAddress) => {
 
     // Try to place the bet
     console.log("\n🚀 Attempting to place bet...");
-    const tx = await contract.placeBetWithoutValue(
+    const tx = await contract.placeBet(
       targetTimestamp,
       priceMin,
       priceMax,
-      stakeAmount,
+      { value: stakeAmount }
     );
 
     console.log("⏳ Waiting for transaction...");

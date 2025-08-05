@@ -20,10 +20,12 @@ task("deploy-test-torch", async () => {
   return deployTestTorchPredictionMarket();
 });
 
-task(
-  "interact-test-torch",
-  "Interact with deployed TestTorchPredictionMarket contract",
-)
+task("deploy-torch", async () => {
+  const deployTorchPredictionMarket = require("./scripts/deployTorchPredictionMarket");
+  return deployTorchPredictionMarket();
+});
+
+task("interact-test-torch", "Interact with deployed TestTorchPredictionMarket contract")
   .addParam("contractAddress", "The address of the deployed contract")
   .setAction(async (taskArgs) => {
     const interactWithTestTorch = require("./scripts/interactWithTestTorch");
@@ -62,11 +64,37 @@ task("place-bet", "Place a bet using placeBetWithoutValue")
     );
   });
 
-task("test-place-bet", "Test placeBetWithoutValue with default parameters")
+task("test-place-bet", "Test placeBet with default parameters")
   .addParam("contractAddress", "The address of the deployed contract")
   .setAction(async (taskArgs) => {
     const testPlaceBet = require("./scripts/testPlaceBet");
     return testPlaceBet(taskArgs.contractAddress);
+  });
+
+task("set-bucket-price", "Set price for a bucket (owner only)")
+  .addParam("contractAddress", "The address of the deployed contract")
+  .addParam("bucket", "The bucket index")
+  .addParam("price", "The price to set")
+  .setAction(async (taskArgs) => {
+    const setBucketPrice = require("./scripts/setBucketPrice");
+    return setBucketPrice(taskArgs.contractAddress, taskArgs.bucket, taskArgs.price);
+  });
+
+task("finalize-bet", "Finalize a bet with actual price (owner only)")
+  .addParam("contractAddress", "The address of the deployed contract")
+  .addParam("betId", "The ID of the bet to finalize")
+  .addParam("actualPrice", "The actual price at target timestamp")
+  .setAction(async (taskArgs) => {
+    const finalizeBet = require("./scripts/finalizeBet");
+    return finalizeBet(taskArgs.contractAddress, taskArgs.betId, taskArgs.actualPrice);
+  });
+
+task("claim-bet", "Claim winnings for a finalized bet")
+  .addParam("contractAddress", "The address of the deployed contract")
+  .addParam("betId", "The ID of the bet to claim")
+  .setAction(async (taskArgs) => {
+    const claimBet = require("./scripts/claimBet");
+    return claimBet(taskArgs.contractAddress, taskArgs.betId);
   });
 
 /** @type import('hardhat/config').HardhatUserConfig */
@@ -84,7 +112,7 @@ module.exports = {
     },
   },
   // This specifies network configurations used when running Hardhat tasks
-  defaultNetwork: "local",
+  defaultNetwork: "testnet",
   networks: {
     local: {
       // Your Hedera Local Node address pulled from the .env file
