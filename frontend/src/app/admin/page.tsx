@@ -36,9 +36,6 @@ function AdminPage() {
   const { user, isLoaded } = useUser();
   const isAdmin = user?.publicMetadata?.role === 'admin';
 
-  console.log('User:', user);
-  console.log('isAdmin:', isAdmin);
-
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-black">
@@ -51,7 +48,7 @@ function AdminPage() {
     );
   }
 
-  if (!isAdmin) {
+  if (user && !isAdmin) {
     return (
       <div className="min-h-screen bg-black">
         <Header />
