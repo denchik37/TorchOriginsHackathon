@@ -152,9 +152,9 @@ function AdminPage() {
 
                     return (
                       <tr key={key} className="border-b border-white/5 hover:bg-dark-slate/50">
-                        <td className="py-3 px-4">{bet.priceMin.toFixed(2)}</td>
+                        <td className="py-3 px-4">{bet.priceMin.toFixed(3)}</td>
                         <td className="py-3 px-4 text-sm text-light-gray">
-                          {bet.priceMax.toFixed(2)}
+                          {bet.priceMax.toFixed(3)}
                         </td>
                         <td className="py-3 px-4 text-sm text-light-gray">
                           {formatDateUTC(bet.targetTimestamp)}
@@ -172,7 +172,7 @@ function AdminPage() {
                             type="number"
                             className="w-24 px-2 py-1 bg-transparent border border-gray-600 rounded text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="Price"
-                            defaultValue={resolution?.toFixed(2)}
+                            defaultValue={resolution?.toFixed(3)}
                             step="0.01"
                             min="0"
                             max="100"
