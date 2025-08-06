@@ -1,0 +1,36 @@
+type User @entity(immutable: true) {
+  id: ID!                # Address
+  totalBets: Int!
+  totalWon: Int!
+  totalStaked: BigInt!
+  totalPayout: BigInt!
+  bets: [Bet!]! @derivedFrom(field: "user")
+}
+
+type Bet @entity(immutable: true) {
+  id: ID!                          # betId
+  user: User!
+  bucket: Int!
+  stake: BigInt!
+  priceMin: BigInt!
+  priceMax: BigInt!
+  targetTimestamp: BigInt!
+  qualityBps: BigInt
+  weight: BigInt
+  finalized: Boolean
+  claimed: Boolean
+  actualPrice: BigInt
+  won: Boolean
+  payout: BigInt
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type Fee @entity(immutable: true) {
+  id: ID!                          # txHash-logIndex
+  amount: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  transactionHash: Bytes!
+}
