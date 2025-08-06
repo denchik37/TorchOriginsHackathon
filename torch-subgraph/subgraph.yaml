@@ -1,0 +1,32 @@
+specVersion: 0.0.4
+description: Torch prediction market subgraph
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum/contract
+    name: TorchPredictionMarket
+    network: mainnet
+    source:
+      address: "0x6e612d342DBaa17EA17c4a8Fe95553C0594E052B"
+      abi: TorchPredictionMarket
+      startBlock: 82882201
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.6
+      language: wasm/assemblyscript
+      entities:
+        - Bet
+        - Fee
+      abis:
+        - name: TorchPredictionMarket
+          file: ./abis/TorchPredictionMarket.json
+      eventHandlers:
+        - event: BetPlaced(indexed uint256,indexed address,uint256,uint256,uint256,uint256,uint256)
+          handler: handleBetPlaced
+        - event: BetFinalized(indexed uint256,uint256,bool,uint256)
+          handler: handleBetFinalized
+        - event: BetClaimed(indexed uint256,indexed address,uint256)
+          handler: handleBetClaimed
+        - event: FeeCollected(uint256)
+          handler: handleFeeCollected
+      file: ./src/mappings.ts
