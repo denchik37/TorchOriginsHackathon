@@ -142,7 +142,7 @@ function AdminPage() {
                   </tr>
                 </thead>
                 <tbody className="max-h-[600px] overflow-y-auto">
-                  {MockData.slice(0, 20).map((bet: Bet, index: number) => {
+                  {MockData.map((bet: Bet, index: number) => {
                     const resolution = findClosestPrice(bet.targetTimestamp);
                     const isInRange =
                       resolution !== null &&
