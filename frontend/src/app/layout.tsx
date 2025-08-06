@@ -4,6 +4,8 @@ import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { headers } from 'next/headers';
 import ContextProvider from '../../context';
+import ApolloProviderClient from '@/components/apollo-client-provider';
+import client from '@/lib/apolloClient';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -21,17 +23,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        {/* Wrap children with ContextProvider, passing cookies */}
-        <ContextProvider cookies={cookies}>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem
-            disableTransitionOnChange
-          >
-            {children}
-          </ThemeProvider>
-        </ContextProvider>
+        <ApolloProviderClient>
+          <ContextProvider cookies={cookies}>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="dark"
+              enableSystem
+              disableTransitionOnChange
+            >
+              {children}
+            </ThemeProvider>
+          </ContextProvider>
+        </ApolloProviderClient>
       </body>
     </html>
   );
