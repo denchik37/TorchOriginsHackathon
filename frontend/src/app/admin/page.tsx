@@ -1,15 +1,10 @@
 'use client';
 
-import {
-  ClerkProvider,
-  SignInButton,
-  SignOutButton,
-  SignedIn,
-  SignedOut,
-  useUser,
-} from '@clerk/nextjs';
+import { useEffect, useState } from 'react';
+import { ClerkProvider, SignInButton, SignOutButton, useUser } from '@clerk/nextjs';
 
 import { formatDateUTC } from '@/lib/utils';
+import { fetchHbarPriceAtTimestamp, type CoinGeckoResponse } from '@/lib/coingecko';
 
 import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
@@ -33,8 +28,48 @@ export default function AdminPageWrapper() {
 }
 
 function AdminPage() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded, isSignedIn } = useUser();
   const isAdmin = user?.publicMetadata?.role === 'admin';
+
+  const [resolutionPrices, setResolutionPrices] = useState<[number, number][]>([]);
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn || !isAdmin) return;
+
+    const fetchPrices = async () => {
+      try {
+        const timestamps = MockData.map((bet: Bet) => bet.targetTimestamp);
+        const start = Math.min(...timestamps);
+        const end = Math.max(...timestamps);
+
+        const { usd: prices } = await fetchHbarPriceAtTimestamp(start, end);
+        setResolutionPrices(prices);
+      } catch (err) {
+        console.error('Error fetching prices:', err);
+      }
+    };
+
+    fetchPrices();
+  }, [isLoaded, isSignedIn, isAdmin]);
+
+  const findClosestPrice = (targetTimestampSec: number): number | null => {
+    if (!resolutionPrices.length) return null;
+
+    const targetMs = targetTimestampSec * 1000;
+    let closest = resolutionPrices[0];
+    let minDiff = Math.abs(targetMs - closest[0]);
+
+    for (let i = 1; i < resolutionPrices.length; i++) {
+      const [timestamp, price] = resolutionPrices[i];
+      const diff = Math.abs(timestamp - targetMs);
+      if (diff < minDiff) {
+        closest = [timestamp, price];
+        minDiff = diff;
+      }
+    }
+
+    return closest?.[1] ?? null;
+  };
 
   if (!isLoaded) {
     return (
@@ -43,6 +78,26 @@ function AdminPage() {
         <div className="flex flex-col items-center justify-center my-12 w-full space-y-2 ">
           <h1 className="text-2xl font-semibold text-text-high-em">Loading...</h1>
           <p className="text-text-low-em">Please wait while we check your access permissions.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isSignedIn) {
+    return (
+      <div className="min-h-screen bg-black">
+        <Header />
+        <div className="flex flex-col items-center justify-center my-12 w-full space-y-2 ">
+          <h1 className="text-2xl font-semibold text-text-high-em">
+            You need to sign in to access the admin dashboard.
+          </h1>
+          <p className="text-text-low-em">
+            Please sign in with an account that has admin privileges.
+          </p>
+
+          <Button variant="torch" className="w-48" asChild>
+            <SignInButton />
+          </Button>
         </div>
       </div>
     );
@@ -69,84 +124,81 @@ function AdminPage() {
   return (
     <div className="min-h-screen bg-black">
       <Header />
-      <SignedIn>
-        <main className="container mx-auto px-4 py-8">
-          <Card>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="min-w-[800px] w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-3 px-4 font-medium text-medium-gray">
-                        Min price
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-medium-gray">
-                        Max price
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-medium-gray">
-                        Date, UTC
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-medium-gray">Status</th>
-                      <th className="text-left py-3 px-4 font-medium text-medium-gray">Price</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {MockData.map((bet: Bet, index: number) => {
-                      const key = `${bet.priceMin}-${bet.priceMax}-${bet.targetTimestamp}`;
 
-                      return (
-                        <tr key={key} className="border-b border-white/5 hover:bg-dark-slate/50">
-                          <td className="py-3 px-4">{bet.priceMin.toFixed(2)}</td>
-                          <td className="py-3 px-4 text-sm text-light-gray">
-                            {bet.priceMax.toFixed(2)}
-                          </td>
-                          <td className="py-3 px-4 text-sm text-light-gray">
-                            {formatDateUTC(bet.targetTimestamp)}
-                          </td>
-                          <td className="py-3 px-4 text-sm text-medium-gray">
-                            {index % 2 === 0 ? (
-                              <span className="text-green-500">Win</span>
-                            ) : (
-                              <span className="text-red-500">Loss</span>
-                            )}
-                          </td>
-                          <td>
-                            <input
-                              type="number"
-                              className="w-24 px-2 py-1 bg-transparent border border-gray-600 rounded text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              placeholder="Price"
-                              defaultValue={bet.betWeight.toFixed(2)}
-                              step="0.01"
-                              min="0"
-                              max="100"
-                              id={`bet-weight-${key}`}
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </main>
-      </SignedIn>
+      <main className="container mx-auto px-4 py-8">
+        <Card>
+          <CardContent>
+            <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
+              <table className="min-w-[800px] w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-3 px-4 font-medium text-medium-gray">Min price</th>
+                    <th className="text-left py-3 px-4 font-medium text-medium-gray">Max price</th>
+                    <th className="text-left py-3 px-4 font-medium text-medium-gray">Date, UTC</th>
+                    <th className="text-left py-3 px-4 font-medium text-medium-gray">Status</th>
+                    <th className="text-left py-3 px-4 font-medium text-medium-gray">
+                      Resolution price
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="max-h-[600px] overflow-y-auto">
+                  {MockData.slice(0, 20).map((bet: Bet, index: number) => {
+                    const resolution = findClosestPrice(bet.targetTimestamp);
+                    const isInRange =
+                      resolution !== null &&
+                      resolution >= bet.priceMin &&
+                      resolution <= bet.priceMax;
+                    const key = `${bet.priceMin}-${bet.priceMax}-${bet.targetTimestamp}`;
 
-      <SignedOut>
-        <div className="flex flex-col items-center justify-center my-12 w-full space-y-2 ">
-          <h1 className="text-2xl font-semibold text-text-high-em">
-            You need to sign in to access the admin dashboard.
-          </h1>
-          <p className="text-text-low-em">
-            Please sign in with an account that has admin privileges.
-          </p>
+                    return (
+                      <tr key={key} className="border-b border-white/5 hover:bg-dark-slate/50">
+                        <td className="py-3 px-4">{bet.priceMin.toFixed(2)}</td>
+                        <td className="py-3 px-4 text-sm text-light-gray">
+                          {bet.priceMax.toFixed(2)}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-light-gray">
+                          {formatDateUTC(bet.targetTimestamp)}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-medium-gray">
+                          {isInRange ? (
+                            <span className="text-green-500">Win</span>
+                          ) : (
+                            <span className="text-red-500">Loss</span>
+                          )}
+                        </td>
 
-          <Button variant="torch" className="w-48" asChild>
-            <SignInButton />
-          </Button>
-        </div>
-      </SignedOut>
+                        <td>
+                          <input
+                            type="number"
+                            className="w-24 px-2 py-1 bg-transparent border border-gray-600 rounded text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Price"
+                            defaultValue={resolution?.toFixed(2)}
+                            step="0.01"
+                            min="0"
+                            max="100"
+                            id={`bet-weight-${key}`}
+                          />
+                        </td>
+
+                        {/* <td className="text-center">
+                          <Button className="w-full" variant="outline">
+                            Fetch price
+                          </Button>
+                        </td> */}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="torch" className="w-48">
+                Submit prices
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </main>
     </div>
   );
 }

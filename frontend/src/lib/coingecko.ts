@@ -15,6 +15,29 @@ export interface CoinGeckoResponse {
 }
 
 /**
+ * Fetch HBAR price based on timestamp
+ * @param startTimestamp - Unix timestamp in seconds
+ * @param endTimestamp - Unix timestamp in seconds
+ * @returns Promise resolving to CoinGeckoHbarData
+ */
+export async function fetchHbarPriceAtTimestamp(
+  startTimestamp: number,
+  endTimestamp: number
+): Promise<{ usd: [number, number][] }> {
+  const url = `https://api.coingecko.com/api/v3/coins/hedera-hashgraph/market_chart/range?vs_currency=usd&from=${startTimestamp}&to=${endTimestamp}`;
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch HBAR price history from CoinGecko');
+  }
+
+  const json = await response.json();
+
+  return { usd: json.prices };
+}
+
+/**
  * Fetch HBAR price data from CoinGecko API
  */
 export async function fetchHbarPrice(): Promise<CoinGeckoResponse> {
@@ -43,4 +66,4 @@ export async function testCoinGeckoAPI(): Promise<void> {
   } catch (error) {
     console.error('CoinGecko API test failed:', error);
   }
-} 
+}
