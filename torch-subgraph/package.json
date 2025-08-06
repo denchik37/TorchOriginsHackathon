@@ -7,7 +7,7 @@
     "deploy": "graph deploy --node https://api.studio.thegraph.com/deploy/ torch-prediction-market",
     "create-local": "graph create --node http://localhost:8020/ TorchPredictionMarket",
     "remove-local": "graph remove --node http://localhost:8020/ TorchPredictionMarket",
-    "deploy-local": "graph deploy --node http://subgraph.xpeerience.io/ --ipfs http://localhost:5001 TorchPredictionMarket",
+    "deploy-local": "graph deploy --node https://subgraph.xpeerience.io/ --ipfs http://localhost:5001 TorchPredictionMarket",
     "test": "graph test",
     "graph-node": "docker-compose -f ./graph-node/docker-compose.yaml up -d",
     "graph-local-clean": "docker-compose down -v && docker-compose rm -v && rm -rf data/ipfs data/postgres",
