@@ -9,7 +9,7 @@
     "remove-local": "graph remove --node http://localhost:8020/ TorchPredictionMarket",
     "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 TorchPredictionMarket",
     "test": "graph test",
-    "graph-node": "docker compose -f ./graph-node/docker-compose.yaml up -d",
+    "graph-node": "docker-compose -f ./graph-node/docker-compose.yaml up -d",
     "graph-local-clean": "docker-compose down -v && docker-compose rm -v && rm -rf data/ipfs data/postgres",
     "graph-codegen": "graph egcoden"
   },
