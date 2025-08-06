@@ -9,11 +9,11 @@ import {
   useUser,
 } from '@clerk/nextjs';
 
-import { useId } from 'react';
+import { formatDateUTC } from '@/lib/utils';
+
 import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { formatDateUTC } from '@/lib/utils';
 
 import MockData from './mock_bet_data.json';
 
