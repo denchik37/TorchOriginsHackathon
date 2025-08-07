@@ -162,13 +162,10 @@ export function PredictionCard({ className }: PredictionCardProps) {
           <div>
             <h2 className="text-xl font-bold text-light-gray">Predict HBAR token price in USD</h2>
 
-            <Button asChild size="sm" variant="link" className="px-0">
-              <a href="https://torch.bet/" target="_blank" rel="noopener noreferrer">
-                <span>Current price: </span>
-                <HbarPriceDisplay size="sm" showIcon={false} showChange={false} />
-                <ExternalLink className="w-4 h-4 ml-1" />
-              </a>
-            </Button>
+            <span className="flex gap-1  text-xs">
+              <b>Current price:</b>
+              <HbarPriceDisplay size="sm" showIcon={false} showChange={false} />
+            </span>
           </div>
         </div>
       </CardHeader>
