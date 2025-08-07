@@ -43,3 +43,12 @@ export function formatTinybarsToHbar(tinybars: number) {
   const hbar = tinybars / TINYBARS_PER_HBAR;
   return hbar.toFixed(6);
 }
+
+export function getRemainingDaysBetweenTimestamps(startTimestamp: number, endTimestamp: number) {
+  const startMs = Number(startTimestamp) * 1000;
+  const endMs = Number(endTimestamp) * 1000;
+  const diffMs = endMs - startMs;
+
+  const msInDay = 1000 * 60 * 60 * 24;
+  return Math.ceil(diffMs / msInDay);
+}

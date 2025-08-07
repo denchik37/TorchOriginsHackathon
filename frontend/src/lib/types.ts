@@ -13,4 +13,9 @@ export interface Bet {
   priceMin: number;
   priceMax: number;
   timestamp: number;
+  targetTimestamp: number;
+  payout: number;
+  claimed: boolean;
+  finalized: boolean;
+  won: boolean;
 }
