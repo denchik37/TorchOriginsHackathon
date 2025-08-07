@@ -22,7 +22,7 @@
   - [🛰️ Step 3: Oracle Resolves Actual Price](#-step-3-oracle-resolves-actual-price)
   - [🛰️ Step 4: Contract Processes Results](#-step-4-contract-processes-results)
   - [🏆 Step 5 – Winnings](#-step-5--winnings)
-- [🛠️ Dev Quickstart](#-installation)
+- [🛠️ Installation](#-installation)
 - [🤝 Team](#-team)
 - [🔗 Resources](#-resources)
 
