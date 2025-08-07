@@ -9,8 +9,8 @@ export interface User {
 export interface Bet {
   id: string;
   user: User;
-  stake: string;
-  priceMin: string;
-  priceMax: string;
+  stake: number;
+  priceMin: number;
+  priceMax: number;
   timestamp: number;
 }

@@ -3,7 +3,7 @@
 import { gql, useQuery } from '@apollo/client';
 
 import type { Bet } from '@/lib/types';
-import { formatAddress, formatDateUTC } from '@/lib/utils';
+import { formatAddress, formatDateUTC, formatTinybarsToHbar } from '@/lib/utils';
 
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -72,9 +72,11 @@ export function BetHistory({ className }: BetHistoryProps) {
                       </Tooltip>
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-sm text-light-gray">{bet.stake}</td>
                   <td className="py-3 px-4 text-sm text-light-gray">
-                    {bet.priceMin} - {bet.priceMax}
+                    {formatTinybarsToHbar(bet.stake)}
+                  </td>
+                  <td className="py-3 px-4 text-sm text-light-gray">
+                    {formatTinybarsToHbar(bet.priceMin)} - {formatTinybarsToHbar(bet.priceMax)}
                   </td>
                   <td className="py-3 px-4 text-sm text-medium-gray">
                     {formatDateUTC(bet.timestamp)}
