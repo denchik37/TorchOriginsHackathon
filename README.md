@@ -20,7 +20,7 @@
   - [🧾 Step 1: Place Bets](#-step-1-place-bets)
   - [🧮 Step 2: Weighting Bets Based on Precision](#-step-2-weighting-bets-based-on-precision)
   - [🔮 Step 3: Oracle Resolves Actual Price](#-step-3-oracle-resolves-actual-price)
-  - [📃 Step 4: Contract Processes Results](#-step-4-contract-processes-results)
+  - [✅ Step 4: Contract Processes Results](#-step-4-contract-processes-results)
   - [🏆 Step 5 – Winnings](#-step-5--winnings)
 - [🛠️ Installation](#-installation)
 - [🤝 Team](#-team)
@@ -117,7 +117,7 @@ torchpredictionmarket/
 setPriceForTimestamp(targetTimestamp, 3000);
 ```
 
-##### 📃 Step 4: Contract Processes Results
+##### ✅ Step 4: Contract Processes Results
 
 ```solidity
 processBatch(targetTimestamp);
