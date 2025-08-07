@@ -18,4 +18,5 @@ export interface Bet {
   claimed: boolean;
   finalized: boolean;
   won: boolean;
+  weight: number;
 }

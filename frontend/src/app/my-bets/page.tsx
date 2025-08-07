@@ -86,7 +86,7 @@ export default function MyBetsPage() {
   const { isConnected } = useWallet(HashpackConnector);
   const [activeCategory, setActiveCategory] = useState('all');
   const { data, error, loading } = useQuery<Data>(GET_USER, {
-    variables: { id: '0x40ade76a75066c6f6ef4dd18aa6218592dea0799' },
+    variables: { id: address },
   });
 
   const user = data?.user;
