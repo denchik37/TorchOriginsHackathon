@@ -28,10 +28,7 @@ interface BetHistoryProps {
 }
 
 export function BetHistory({ className }: BetHistoryProps) {
-  const { data, loading, error } = useQuery(GET_BETS);
-
-  if (loading) return <div className="text-light-gray">Loading...</div>;
-  if (error) return <div className="text-red-500">Error: {error.message}</div>;
+  const { data, error, loading } = useQuery(GET_BETS);
 
   return (
     <div className={className}>
@@ -46,26 +43,44 @@ export function BetHistory({ className }: BetHistoryProps) {
             </tr>
           </thead>
           <tbody>
-            {data.bets.map((bet: Bet) => (
-              <tr key={bet.id} className="border-b border-white/5 hover:bg-dark-slate/50">
-                <td className="py-3 px-4">
-                  <div className="flex items-center space-x-3">
-                    <Tooltip content={bet.user.id}>
-                      <span className="text-sm font-mono text-light-gray">
-                        {formatAddress(bet.user.id, 2)}
-                      </span>
-                    </Tooltip>
-                  </div>
-                </td>
-                <td className="py-3 px-4 text-sm text-light-gray">{bet.stake}</td>
-                <td className="py-3 px-4 text-sm text-light-gray">
-                  {bet.priceMin} - {bet.priceMax}
-                </td>
-                <td className="py-3 px-4 text-sm text-medium-gray">
-                  {formatDateUTC(bet.timestamp)}
+            {error && (
+              <tr>
+                <td colSpan={4} className="text-red-500 text-left py-4">
+                  Error: {error.message}
                 </td>
               </tr>
-            ))}
+            )}
+
+            {loading && (
+              <tr>
+                <td colSpan={4} className="text-light-gray text-left py-4">
+                  Loading...
+                </td>
+              </tr>
+            )}
+
+            {!error &&
+              !loading &&
+              data.bets.map((bet: Bet) => (
+                <tr key={bet.id} className="border-b border-white/5 hover:bg-dark-slate/50">
+                  <td className="py-3 px-4">
+                    <div className="flex items-center space-x-3">
+                      <Tooltip content={bet.user.id}>
+                        <span className="text-sm font-mono text-light-gray">
+                          {formatAddress(bet.user.id, 2)}
+                        </span>
+                      </Tooltip>
+                    </div>
+                  </td>
+                  <td className="py-3 px-4 text-sm text-light-gray">{bet.stake}</td>
+                  <td className="py-3 px-4 text-sm text-light-gray">
+                    {bet.priceMin} - {bet.priceMax}
+                  </td>
+                  <td className="py-3 px-4 text-sm text-medium-gray">
+                    {formatDateUTC(bet.timestamp)}
+                  </td>
+                </tr>
+              ))}
           </tbody>
         </table>
       </div>
