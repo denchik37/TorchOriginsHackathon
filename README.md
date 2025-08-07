@@ -9,6 +9,25 @@
 
 ---
 
+## 📚 Table of Contents
+
+- [🌍 What Is Torch?](#-what-is-torch)
+- [💎 Value Proposition](#-value-proposition)
+- [🏁 Hackathon Scope](#hackathon-scope)
+- [🧱 Monorepo Structure](#-monorepo-structure)
+- [📁 Project Breakdown](#project-overview)
+- [📚 How It Works: TorchPredictionMarket Step-by-Step](#-how-it-works-torchpredictionmarket-step-by-step)
+  - [🧾 Step 1: Place Bets](#-step-1-place-bets)
+  - [🧮 Step 2: Weighting Bets Based on Precision](#-step-2-weighting-bets-based-on-precision)
+  - [🛰️ Step 3: Oracle Resolves Actual Price](#-step-3-oracle-resolves-actual-price)
+  - [🛰️ Step 4: Contract Processes Results](#-step-4-contract-processes-results)
+  - [🏆 Step 5 – Winnings](#-step-5--winnings)
+- [🛠️ Dev Quickstart](#-installation)
+- [🤝 Team](#-team)
+- [🔗 Resources](#-resources)
+
+---
+
 ## 🌍 What Is Torch?
 
 **Torch** is a decentralized prediction system for high-resolution, real-time **crypto price forecasting**.
@@ -114,7 +133,7 @@ processBatch(targetTimestamp);
 #
 ---
 
-## 🛠️ Dev Quickstart
+## 🛠️ Installation
 
 ### 🔐 Setup Environment
 
@@ -136,11 +155,11 @@ cd frontend && npm install
 
 | Name             | Role                  | Contact / Profile                  |
 |------------------|-----------------------|----------------------------------|
-| Denis | ?  | [GitHub](https://github.com/denchik37) |
-| Catalin         | ?     | [Github](https://linkedin.com/in/janedoe) |
-| Sebastien       | ?     | [Github](https://twitter.com/johnsmith)   |
-| Darius Sebastian       | ?     | [Github](https://twitter.com/johnsmith)   |
-| Hatif       | ?     | [Github](https://twitter.com/johnsmith)   |
+| Denis Igin | ?  | [GitHub](https://github.com/denchik37) |
+| Balut Catalin-Mihai         | ?     | [Github](https://github.com/CatalinBalut) |
+| Sebastien Guibert      | ?     | [Github](https://github.com/Cascou)   |
+| Sebastian Balaj       | ?     | [Github](https://github.com/balajsebastian)   |
+| Mohammad Hatif Osmani      | ?     | [Github](https://github.com/hatif03)   |
 
 
 #
