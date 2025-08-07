@@ -3,8 +3,9 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ExternalLink, Wallet, Settings, ChevronDown, TrendingUp, TrendingDown } from 'lucide-react';
-import { useAccount, useBalance, useDisconnect } from 'wagmi';
+import { ExternalLink, Wallet, Settings, ChevronDown, TrendingUp, TrendingDown, Copy, Check, User } from 'lucide-react';
+import { useWallet } from '@buidlerlabs/hashgraph-react-wallets';
+import { HashpackConnector } from '@buidlerlabs/hashgraph-react-wallets/connectors';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import {
@@ -13,17 +14,36 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Tooltip } from '@/components/ui/tooltip';
 
 import { formatAddress } from '@/lib/utils';
 import { useHbarPrice } from '@/hooks/useHbarPrice';
 import { HbarPriceDisplay } from '@/components/hbar-price-display';
+import { WalletSelector } from '@/components/wallet-selector';
+import { useMultiWallet } from '@/hooks/useMultiWallet';
 
 export function Header() {
-  const { address, isConnected } = useAccount();
-  const { disconnect } = useDisconnect();
-  const { data: balance } = useBalance({
-    address,
-  });
+  const { currentWalletState } = useMultiWallet();
+  const [copied, setCopied] = React.useState(false);
+
+  const handleCopyAddress = async () => {
+    // Try to get the address from various possible properties
+    const address = (currentWalletState as any)?.accountId || 
+                   (currentWalletState as any)?.address || 
+                   (currentWalletState as any)?.account?.id ||
+                   (currentWalletState as any)?.account?.address;
+    if (address) {
+      await navigator.clipboard.writeText(address);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  // Try to get the wallet address from various possible properties
+  const walletAddress = (currentWalletState as any)?.accountId || 
+                       (currentWalletState as any)?.address || 
+                       (currentWalletState as any)?.account?.id ||
+                       (currentWalletState as any)?.account?.address || '';
 
   return (
     <header className="border-b border-border bg-neutral-950 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -58,11 +78,11 @@ export function Header() {
             </div>
           </Button>
 
-          {isConnected ? (
+          {currentWalletState.isConnected ? (
             <>
               <div className="flex items-center space-x-2">
                 <span className="text-sm font-medium text-light-gray">
-                  {balance ? `${parseFloat(balance.formatted).toFixed(0)} HBAR` : '0 HBAR'}
+                  HBAR Balance
                 </span>
                 <Button
                   variant="outline"
@@ -74,23 +94,43 @@ export function Header() {
                 </Button>
               </div>
 
+              {/* Wallet Address Button */}
+              {walletAddress && (
+                <Tooltip content={`${walletAddress} (Click to copy)`}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center space-x-2 bg-neutral-800 border-neutral-700 text-light-gray hover:bg-neutral-700"
+                    onClick={handleCopyAddress}
+                  >
+                    <User className="w-3 h-3" />
+                    <span className="text-xs font-mono">
+                      {formatAddress(walletAddress, 4)}
+                    </span>
+                    {copied && (
+                      <Check className="w-3 h-3 text-green-400" />
+                    )}
+                  </Button>
+                </Tooltip>
+              )}
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="flex items-center space-x-2 text-light-gray">
                     <div className="w-8 h-8 bg-vibrant-purple rounded-full flex items-center justify-center">
                       <div className="w-2 h-2 bg-white rounded-full" />
                     </div>
-                    <span className="text-sm font-medium">{formatAddress(address || '', 2)}</span>
+                    <span className="text-sm font-medium">Connected</span>
                     <ChevronDown className="w-4 h-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => disconnect()}>Disconnect</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => currentWalletState.disconnect()}>Disconnect</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </>
           ) : (
-            <appkit-button />
+            <WalletSelector />
           )}
 
           <ThemeToggle />

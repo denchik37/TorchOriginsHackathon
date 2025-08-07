@@ -1,3 +1,6 @@
+import { Button } from '@/components/ui/button';
+import { WalletSelector } from '@/components/wallet-selector';
+
 export default function NoWalletConnectedPage() {
   return (
     <div className="mt-12 w-full items-center space-y-8 px-6 md:flex md:flex-col">
@@ -10,7 +13,7 @@ export default function NoWalletConnectedPage() {
         </p>
       </div>
 
-      <appkit-button />
+      <WalletSelector />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useWallet } from '@buidlerlabs/hashgraph-react-wallets';
+import { HashpackConnector } from '@buidlerlabs/hashgraph-react-wallets/connectors';
 import { gql, useQuery } from '@apollo/client';
 import { CheckCircle, XCircle, Clock } from 'lucide-react';
 
@@ -82,7 +83,7 @@ const getCardBackground = (bet: Bet) => {
 };
 
 export default function MyBetsPage() {
-  const { address } = useAccount();
+  const { isConnected } = useWallet(HashpackConnector);
   const [activeCategory, setActiveCategory] = useState('all');
   const { data, error, loading } = useQuery<Data>(GET_USER, {
     variables: { id: '0x40ade76a75066c6f6ef4dd18aa6218592dea0799' },
@@ -124,7 +125,7 @@ export default function MyBetsPage() {
     <div className="min-h-screen bg-black">
       <Header />
       <div className="container mx-auto px-4 py-8">
-        {!address ? (
+        {!isConnected ? (
           <NoWalletConnectedContainer />
         ) : (
           <>
