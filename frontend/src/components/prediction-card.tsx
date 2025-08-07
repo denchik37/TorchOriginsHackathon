@@ -34,17 +34,6 @@ export function PredictionCard({ className }: PredictionCardProps) {
 
   const { price: currentPrice, isLoading: priceLoading, error: priceError } = useHbarPrice();
 
-  // Mock data for the KDE chart
-  const forecastData = [
-    { date: 'Aug 1', price: 0.2645, confidence: 85 },
-    { date: 'Aug 2', price: 0.268, confidence: 78 },
-    { date: 'Aug 3', price: 0.2715, confidence: 72 },
-    { date: 'Aug 4', price: 0.275, confidence: 68 },
-    { date: 'Aug 5', price: 0.2785, confidence: 65 },
-    { date: 'Aug 6', price: 0.282, confidence: 62 },
-    { date: 'Aug 7', price: 0.2855, confidence: 58 },
-    { date: 'Aug 8', price: 0.289, confidence: 55 },
-  ];
   const totalBets = 1300;
   const activeBets = 375;
   const balance = 540;
