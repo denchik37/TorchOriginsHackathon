@@ -87,7 +87,7 @@ torchpredictionmarket/
 |-----------------|-------------|
 | [`frontend/`](./frontend) | React frontend with wallet connect, core integration of Smart Contract & Subgraph, prediction UI |
 | [`smartContracts/`](./smartContracts) | Core Solidity smart contracts for placing, resolving, and claiming predictions |
-| [`torch-subgraph/`](./torch-subgraph) | Graph protocol subgraph for indexing `User`, `Bet`, and `Fee` events |
+| [`torch-subgraph/`](./torch-subgraph) | Graph protocol subgraph for indexing `BetPlaced`, `BetFinalized`, and `BetClaimed` events |
 
 ---
 
