@@ -4,7 +4,7 @@ import { gql, useQuery } from '@apollo/client';
 
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
-import { cn } from '@/lib/utils';
+import { cn, formatTinybarsToHbar } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Maximize2 } from 'lucide-react';
 import { KDEChartModal } from './kde-chart-modal';
@@ -40,11 +40,16 @@ export function KDEChart({ className, currentPrice, enableZoom = false }: KDECha
 
     const processData = (rawData: any[]) => {
       return rawData
-        .map((d) => ({
-          time: new Date(d.targetTimestamp * 1000),
-          price: (d.priceMin + d.priceMax) / 2,
-          stake: d.weight,
-        }))
+        .map((d) => {
+          const minPrice = formatTinybarsToHbar(d.priceMin);
+          const maxPrice = formatTinybarsToHbar(d.priceMax);
+
+          return {
+            time: new Date(d.targetTimestamp * 1000),
+            price: (Number(minPrice) + Number(maxPrice)) / 2,
+            stake: d.weight,
+          };
+        })
         .filter((d) => d.time > new Date()); // Filter for future dates only
     };
 
