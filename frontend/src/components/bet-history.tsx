@@ -1,59 +1,38 @@
 'use client';
 
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { gql, useQuery } from '@apollo/client';
+
+import type { Bet } from '@/lib/types';
+import { formatAddress, formatDateUTC } from '@/lib/utils';
+
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
-import { formatAddress } from '@/lib/utils';
+
+const GET_BETS = gql`
+  query {
+    bets(first: 100, orderBy: timestamp, orderDirection: desc) {
+      id
+      user {
+        id
+      }
+      stake
+      priceMin
+      priceMax
+      timestamp
+    }
+  }
+`;
 
 interface BetHistoryProps {
   className?: string;
 }
 
-// Mock data for bet history
-const mockBetHistory = [
-  {
-    id: 1,
-    user: '0xAb5801a7D398351b8bE11C439e05C5b3259aec9B',
-    amount: 1.67,
-    range: '0.27-0.28',
-    date: 'Aug 1, 13:00',
-    avatar: '🟣',
-  },
-  {
-    id: 2,
-    user: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-    amount: 10.12,
-    range: '0.1-0.2',
-    date: 'Aug 8, 00:00',
-    avatar: '🟡',
-  },
-  {
-    id: 3,
-    user: '0xDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF',
-    amount: 431.54,
-    range: '0.37-0.5',
-    date: 'Aug 1, 23:59',
-    avatar: '🔴',
-  },
-  {
-    id: 4,
-    user: '0x00000000219ab540356cBB839Cbe05303d7705Fa',
-    amount: 0.78,
-    range: '0.24-0.24',
-    date: 'Aug 3, 21:15',
-    avatar: '🌈',
-  },
-  {
-    id: 5,
-    user: '0x1234567890abcdef1234567890abcdef12345678',
-    amount: 1.36,
-    range: '1-2',
-    date: 'Dec 31, 20:02',
-    avatar: '🟢',
-  },
-];
-
 export function BetHistory({ className }: BetHistoryProps) {
+  const { data, loading, error } = useQuery(GET_BETS);
+
+  if (loading) return <div className="text-light-gray">Loading...</div>;
+  if (error) return <div className="text-red-500">Error: {error.message}</div>;
+
   return (
     <div className={className}>
       <div className="overflow-x-auto">
@@ -67,24 +46,24 @@ export function BetHistory({ className }: BetHistoryProps) {
             </tr>
           </thead>
           <tbody>
-            {mockBetHistory.map((bet) => (
+            {data.bets.map((bet: Bet) => (
               <tr key={bet.id} className="border-b border-white/5 hover:bg-dark-slate/50">
                 <td className="py-3 px-4">
                   <div className="flex items-center space-x-3">
-                    <Avatar className="w-8 h-8">
-                      <AvatarFallback className="text-xs">{bet.avatar}</AvatarFallback>
-                    </Avatar>
-
-                    <Tooltip content={bet.user}>
+                    <Tooltip content={bet.user.id}>
                       <span className="text-sm font-mono text-light-gray">
-                        {formatAddress(bet.user, 2)}
+                        {formatAddress(bet.user.id, 2)}
                       </span>
                     </Tooltip>
                   </div>
                 </td>
-                <td className="py-3 px-4 text-sm text-light-gray">{bet.amount}</td>
-                <td className="py-3 px-4 text-sm text-light-gray">{bet.range}</td>
-                <td className="py-3 px-4 text-sm text-medium-gray">{bet.date}</td>
+                <td className="py-3 px-4 text-sm text-light-gray">{bet.stake}</td>
+                <td className="py-3 px-4 text-sm text-light-gray">
+                  {bet.priceMin} - {bet.priceMax}
+                </td>
+                <td className="py-3 px-4 text-sm text-medium-gray">
+                  {formatDateUTC(bet.timestamp)}
+                </td>
               </tr>
             ))}
           </tbody>

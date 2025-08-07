@@ -31,7 +31,7 @@ export function PredictionCard({ className }: PredictionCardProps) {
   const [resolutionTime, setResolutionTime] = useState('13:00');
   const [isPlacingBet, setIsPlacingBet] = useState(false);
   const [isBetPlaced, setIsBetPlaced] = useState(false);
-  
+
   const { price: currentPrice, isLoading: priceLoading, error: priceError } = useHbarPrice();
 
   // Mock data for the KDE chart
