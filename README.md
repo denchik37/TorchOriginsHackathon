@@ -72,11 +72,11 @@ torchpredictionmarket/
 
 ---
 
-## 📚 How It Works: TorchPredictionMarket Step-by-Step
+### 📚 **How It Works: TorchPredictionMarket** Step-by-Step
 
-### Example: Alice, Bob, and Charlie Predict HBAR’s Price for Tomorrow
+#### Example: Alice, Bob, and Charlie Predict HBAR’s Price for Tomorrow
 
-#### 🧾 Step 1: Place Bets
+##### 🧾 Step 1: Place Bets
 
 | User     | Predicted Range | USD Range | Bet | Sharpness | Expected |
 |----------|------------------|-----------|-----|-----------|----------|
@@ -84,7 +84,7 @@ torchpredictionmarket/
 | Bob      | 2700–3300 BPS    | $0.27–0.33| 10 HBAR | Wide     | ✅ Win   |
 | Charlie  | 3500–4000 BPS    | $0.35–0.40| 10 HBAR | Off-target | ❌ Lose |
 
-#### 🧮 Step 2: Weighting Bets Based on Precision
+##### 🧮 Step 2: Weighting Bets Based on Precision
 
 | User     | Width BPS | Sharpness Multiplier | Net Stake | Weight |
 |----------|-----------|----------------------|-----------|--------|
@@ -92,18 +92,18 @@ torchpredictionmarket/
 | Bob      | 600       | 0.3x                 | 9.95 HBAR | 2.985  |
 | Charlie  | 500       | 0.5x                 | 9.95 HBAR | 4.975  |
 
-#### 🛰️ Step 3: Oracle Resolves Actual Price
+##### 🛰️ Step 3: Oracle Resolves Actual Price
 
 ```solidity
 setPriceForTimestamp(targetTimestamp, 3000);
 ```
 
-#### 🛰️ Step 4: Contract Processes Results
+##### 🛰️ Step 4: Contract Processes Results
 
 ```solidity
 processBatch(targetTimestamp);
 ```
-### 🏆 Step 5 – Winnings
+##### 🏆 Step 5 – Winnings
 
 | User     | Weight | Result   | Winnings     |
 |----------|--------|----------|--------------|
