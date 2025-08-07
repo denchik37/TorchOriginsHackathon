@@ -1,7 +1,9 @@
-import { ApolloClient, InMemoryCache } from '@apollo/client';
+import { ApolloClient, InMemoryCache, HttpLink } from '@apollo/client';
 
 const client = new ApolloClient({
-  uri: process.env.NEXT_PUBLIC_SUBGRAPH_URL,
+  link: new HttpLink({
+    uri: '/api/subgraph', // your API proxy URL
+  }),
   cache: new InMemoryCache(),
 });
 
