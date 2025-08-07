@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { useWallet } from '@buidlerlabs/hashgraph-react-wallets';
+import { useWallet, useEvmAddress } from '@buidlerlabs/hashgraph-react-wallets';
 import { HashpackConnector } from '@buidlerlabs/hashgraph-react-wallets/connectors';
 import { gql, useQuery } from '@apollo/client';
 import { CheckCircle, XCircle, Clock } from 'lucide-react';
@@ -83,10 +83,12 @@ const getCardBackground = (bet: Bet) => {
 };
 
 export default function MyBetsPage() {
+  const { data: evmAddress } = useEvmAddress();
   const { isConnected } = useWallet(HashpackConnector);
   const [activeCategory, setActiveCategory] = useState('all');
-  const { data, error, loading } = useQuery<Data>(GET_USER, {
-    variables: { id: address },
+
+  const { data } = useQuery<Data>(GET_USER, {
+    variables: { id: evmAddress },
   });
 
   const user = data?.user;
