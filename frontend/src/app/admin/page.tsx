@@ -37,14 +37,14 @@ export default function AdminPageWrapper() {
 }
 
 function AdminPage() {
-  const { data } = useQuery(GET_BETS);
+  const { data, loading } = useQuery(GET_BETS);
   const { user, isLoaded, isSignedIn } = useUser();
   const isAdmin = user?.publicMetadata?.role === 'admin';
 
   const [resolutionPrices, setResolutionPrices] = useState<[number, number][]>([]);
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn || !isAdmin) return;
+    if (!isLoaded || !isSignedIn || !isAdmin || loading) return;
 
     const fetchPrices = async () => {
       try {
@@ -60,7 +60,7 @@ function AdminPage() {
     };
 
     fetchPrices();
-  }, [isLoaded, isSignedIn, isAdmin]);
+  }, [isLoaded, loading, isSignedIn, isAdmin]);
 
   const findClosestPrice = (targetTimestampSec: number): number | null => {
     if (!resolutionPrices.length) return null;
