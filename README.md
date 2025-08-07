@@ -19,10 +19,10 @@
 - [📚 How It Works: TorchPredictionMarket Step-by-Step](#-how-it-works-torchpredictionmarket-step-by-step)
   - [🧾 Step 1: Place Bets](#-step-1-place-bets)
   - [🧮 Step 2: Weighting Bets Based on Precision](#-step-2-weighting-bets-based-on-precision)
-  - [🛰️ Step 3: Oracle Resolves Actual Price](#step-3-oracle-resolves-actual-price)
-  - [🛰️ Step 4: Contract Processes Results](#step-4-contract-processes-results)
+  - [🔮 Step 3: Oracle Resolves Actual Price](#-step-3-oracle-resolves-actual-price)
+  - [🎛️ Step 4: Contract Processes Results](#step-4-contract-processes-results)
   - [🏆 Step 5 – Winnings](#-step-5--winnings)
-- [🛠️ Installation](#installation)
+- [🛠️ Installation](#-installation)
 - [🤝 Team](#-team)
 - [🔗 Resources](#-resources)
 
@@ -111,13 +111,13 @@ torchpredictionmarket/
 | Bob      | 600       | 0.3x                 | 9.95 HBAR | 2.985  |
 | Charlie  | 500       | 0.5x                 | 9.95 HBAR | 4.975  |
 
-##### 🛰️ Step 3: Oracle Resolves Actual Price
+##### 🔮 Step 3: Oracle Resolves Actual Price
 
 ```solidity
 setPriceForTimestamp(targetTimestamp, 3000);
 ```
 
-##### 🛰️ Step 4: Contract Processes Results
+##### 🎛️ Step 4: Contract Processes Results
 
 ```solidity
 processBatch(targetTimestamp);
