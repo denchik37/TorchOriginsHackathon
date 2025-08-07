@@ -155,11 +155,11 @@ cd frontend && npm install
 
 | Name             | Role                  | Contact / Profile                  |
 |------------------|-----------------------|----------------------------------|
-| Denis Igin | ?  | [GitHub](https://github.com/denchik37) |
-| Balut Catalin-Mihai         | ?     | [Github](https://github.com/CatalinBalut) |
-| Sebastien Guibert      | ?     | [Github](https://github.com/Cascou)   |
-| Sebastian Balaj       | ?     | [Github](https://github.com/balajsebastian)   |
-| Mohammad Hatif Osmani      | ?     | [Github](https://github.com/hatif03)   |
+| Denis Igin | PM, Marketing  | [GitHub](https://github.com/denchik37) |
+| Balut Catalin-Mihai         | Smart contract developer     | [Github](https://github.com/CatalinBalut) |
+| Sebastien Guibert      | Frontend developer     | [Github](https://github.com/Cascou)   |
+| Sebastian Balaj       | Sebastien Guibert     | [Github](https://github.com/balajsebastian)   |
+| Hatif Osmani      | Frontend developer     | [Github](https://github.com/hatif03)   |
 
 
 #
