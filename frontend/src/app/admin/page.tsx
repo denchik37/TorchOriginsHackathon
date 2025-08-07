@@ -1,7 +1,10 @@
 'use client';
 
+import { gql, useQuery } from '@apollo/client';
 import { useEffect, useState } from 'react';
 import { ClerkProvider, SignInButton, SignOutButton, useUser } from '@clerk/nextjs';
+
+import type { Bet } from '@/lib/types';
 
 import { formatDateUTC } from '@/lib/utils';
 import { fetchHbarPriceAtTimestamp, type CoinGeckoResponse } from '@/lib/coingecko';
@@ -10,14 +13,20 @@ import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
-import MockData from './mock_bet_data.json';
-
-interface Bet {
-  targetTimestamp: number;
-  priceMin: number;
-  priceMax: number;
-  betWeight: number;
-}
+const GET_BETS = gql`
+  query {
+    bets(first: 100, orderBy: timestamp, orderDirection: desc) {
+      id
+      user {
+        id
+      }
+      stake
+      priceMin
+      priceMax
+      timestamp
+    }
+  }
+`;
 
 export default function AdminPageWrapper() {
   return (
@@ -28,6 +37,7 @@ export default function AdminPageWrapper() {
 }
 
 function AdminPage() {
+  const { data } = useQuery(GET_BETS);
   const { user, isLoaded, isSignedIn } = useUser();
   const isAdmin = user?.publicMetadata?.role === 'admin';
 
@@ -38,7 +48,7 @@ function AdminPage() {
 
     const fetchPrices = async () => {
       try {
-        const timestamps = MockData.map((bet: Bet) => bet.targetTimestamp);
+        const timestamps = data.bets.map((bet: Bet) => bet.targetTimestamp);
         const start = Math.min(...timestamps);
         const end = Math.max(...timestamps);
 
@@ -142,7 +152,7 @@ function AdminPage() {
                   </tr>
                 </thead>
                 <tbody className="max-h-[600px] overflow-y-auto">
-                  {MockData.map((bet: Bet, index: number) => {
+                  {data.bets.map((bet: Bet) => {
                     const resolution = findClosestPrice(bet.targetTimestamp);
                     const isInRange =
                       resolution !== null &&
