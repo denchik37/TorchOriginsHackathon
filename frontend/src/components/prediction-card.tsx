@@ -65,7 +65,7 @@ export function PredictionCard({ className }: PredictionCardProps) {
     min: 0.0,
     max: 0.2843,
   });
-  const [depositAmount, setDepositAmount] = useState('');
+  const [depositAmount, setDepositAmount] = useState('0');
   const [resolutionDate, setResolutionDate] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000)); // Tomorrow
   const [resolutionTime, setResolutionTime] = useState('13:00');
   const [isPlacingBet, setIsPlacingBet] = useState(false);
@@ -448,9 +448,9 @@ export function PredictionCard({ className }: PredictionCardProps) {
               <div className="flex justify-between py-3 px-4 border border-white/5 rounded-lg text-sm">
                 <span className="text-medium-gray">Protocol fee:</span>
                 <span className="text-white">
-                  0.5%{' '}
+                  0.5%
                   <span className="text-medium-gray">
-                    ({(parseFloat(depositAmount ?? 0) * 0.005).toFixed(4)} HBAR)
+                    ({(parseFloat(depositAmount) * 0.005).toFixed(4)} HBAR)
                   </span>
                 </span>
               </div>
