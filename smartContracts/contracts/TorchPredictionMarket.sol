@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title TorchPredictionMarket
@@ -132,7 +132,7 @@ contract TorchPredictionMarket is ReentrancyGuard, Ownable, Pausable {
     // ==============================================================
     // |                    Constructor                             |
     // ==============================================================
-    constructor() {
+    constructor() Ownable(msg.sender) {
         startTimestamp = block.timestamp;
     }
 
@@ -151,9 +151,10 @@ contract TorchPredictionMarket is ReentrancyGuard, Ownable, Pausable {
         uint256 targetTimestamp,
         uint256 priceMin,
         uint256 priceMax
-    ) external payable validBetAmount(msg.value) validTimeRange(targetTimestamp) whenNotPaused nonReentrant returns (uint256) {
+    ) external payable validTimeRange(targetTimestamp) whenNotPaused nonReentrant returns (uint256) {
         require(priceMin < priceMax, "Invalid price range");
         require(priceMin > 0 && priceMax > 0, "Prices must be positive");
+        require(targetTimestamp > block.timestamp, "Cannot bet on past timestamps");
 
         // Calculate fee and net stake
         uint256 fee = (msg.value * FEE_BPS) / BPS_DENOM;
@@ -169,6 +170,91 @@ contract TorchPredictionMarket is ReentrancyGuard, Ownable, Pausable {
 
         // Create bet
         return _createBet(msg.sender, targetTimestamp, priceMin, priceMax, stakeNet, qualityBps, weight);
+    }
+
+    /**
+     * @notice Place multiple bets in a single transaction
+     * @param targetTimestamps Array of target timestamps
+     * @param priceMins Array of minimum prices in BPS
+     * @param priceMaxs Array of maximum prices in BPS
+     * @return betIds Array of bet IDs
+     */
+    function placeBatchBets(
+        uint256[] calldata targetTimestamps,
+        uint256[] calldata priceMins,
+        uint256[] calldata priceMaxs,
+        uint256[] calldata stakeAmounts
+    ) external payable whenNotPaused nonReentrant returns (uint256[] memory betIds) {
+        require(
+            targetTimestamps.length == priceMins.length && 
+            priceMins.length == priceMaxs.length &&
+            priceMaxs.length == stakeAmounts.length,
+            "Array lengths must match"
+        );
+        require(targetTimestamps.length > 0, "Must place at least one bet");
+
+        betIds = new uint256[](targetTimestamps.length);
+        uint256 totalStake = 0;
+
+        // Calculate total stake needed
+        for (uint256 i = 0; i < targetTimestamps.length; i++) {
+            require(targetTimestamps[i] > block.timestamp, "Cannot bet on past timestamps");
+            require(
+                targetTimestamps[i] >= block.timestamp + (MIN_DAYS_AHEAD * SECONDS_PER_DAY) &&
+                targetTimestamps[i] <= block.timestamp + (MAX_DAYS_AHEAD * SECONDS_PER_DAY),
+                "Invalid time range"
+            );
+
+            totalStake += stakeAmounts[i];
+        }
+
+        // Place each bet
+        for (uint256 i = 0; i < targetTimestamps.length; i++) {
+            betIds[i] = _placeSingleBet(
+                msg.sender,
+                targetTimestamps[i],
+                priceMins[i],
+                priceMaxs[i],
+                stakeAmounts[i]
+            );
+        }
+
+        return betIds;
+    }
+
+    /**
+     * @notice Internal helper function to place a single bet
+     */
+    function _placeSingleBet(
+        address bettor,
+        uint256 targetTimestamp,
+        uint256 priceMin,
+        uint256 priceMax,
+        uint256 stakeAmount
+    ) internal returns (uint256) {
+        // Calculate fee and net stake for this bet
+        uint256 fee = (stakeAmount * FEE_BPS) / BPS_DENOM;
+        uint256 stakeNet = stakeAmount - fee;
+        
+        // Update fee collection
+        totalFeesCollected += fee;
+        emit FeeCollected(fee);
+
+        // Create bet with simplified calculations
+        uint256 sharpness = getSharpnessMultiplier(priceMin, priceMax);
+        uint256 timeMultiplier = getTimeMultiplier(targetTimestamp);
+        uint256 qualityBps = (sharpness * timeMultiplier) / BPS_DENOM;
+        uint256 weight = (stakeNet * qualityBps) / BPS_DENOM;
+        
+        return _createBet(
+            bettor, 
+            targetTimestamp, 
+            priceMin, 
+            priceMax, 
+            stakeNet, 
+            qualityBps,
+            weight
+        );
     }
 
     /**
