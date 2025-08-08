@@ -450,7 +450,7 @@ export function PredictionCard({ className }: PredictionCardProps) {
                 <span className="text-white">
                   0.5%{' '}
                   <span className="text-medium-gray">
-                    ({(parseFloat(depositAmount) * 0.005).toFixed(4)} HBAR)
+                    ({(parseFloat(depositAmount ?? 0) * 0.005).toFixed(4)} HBAR)
                   </span>
                 </span>
               </div>
