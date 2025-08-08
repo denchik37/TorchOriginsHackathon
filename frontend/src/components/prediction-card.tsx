@@ -63,8 +63,8 @@ export function PredictionCard({ className }: PredictionCardProps) {
   const { price: currentPrice, isLoading: priceLoading, error: priceError } = useHbarPrice();
 
   const { data, loading, error } = useQuery(GET_BETS_BY_TIMESTAMP, {
-    // variables: { startTimestamp: startUnix, endTimestamp: endUnix },
-    variables: { startTimestamp: '1754472860', endTimestamp: '1754579194' },
+    variables: { startTimestamp: startUnix, endTimestamp: endUnix },
+    // variables: { startTimestamp: '1754472860', endTimestamp: '1754579194' },
   });
 
   const totalBets = 1300;
