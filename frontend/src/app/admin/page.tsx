@@ -21,6 +21,7 @@ const GET_BETS = gql`
       priceMin
       priceMax
       timestamp
+      targetTimestamp
     }
   }
 `;
@@ -45,7 +46,7 @@ function AdminPage() {
 
     const fetchPrices = async () => {
       try {
-        const timestamps = data.bets.map((bet: Bet) => bet.targetTimestamp);
+        const timestamps = data.bets.map((bet: Bet) => bet.timestamp);
         const start = Math.min(...timestamps);
         const end = Math.max(...timestamps);
 
@@ -59,10 +60,10 @@ function AdminPage() {
     fetchPrices();
   }, [isLoaded, loading, isSignedIn, isAdmin]);
 
-  const findClosestPrice = (targetTimestampSec: number): number | null => {
+  const findClosestPrice = (timestamp: number): number | null => {
     if (!resolutionPrices.length) return null;
 
-    const targetMs = targetTimestampSec * 1000;
+    const targetMs = timestamp * 1000;
     let closest = resolutionPrices[0];
     let minDiff = Math.abs(targetMs - closest[0]);
 
