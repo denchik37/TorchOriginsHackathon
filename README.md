@@ -156,7 +156,7 @@ cd frontend && npm install
 | Name             | Role                  | Contact / Profile                  |
 |------------------|-----------------------|----------------------------------|
 | Denis Igin | PM, Marketing  | [GitHub](https://github.com/denchik37) |
-| Balut Catalin-Mihai         | Smart Contract Developer     | [Github](https://github.com/CatalinBalut) |
+| Balut Catalin-Mihai         | Smart Contract Developer     | [Github](https://github.com/CatalinBalut) ||
 | Sebastien Guibert      | Blockchain Data Integration/Architect     | [Github](https://github.com/Cascou)   |
 | Sebastian Balaj       | Frontend Developer     | [Github](https://github.com/balajsebastian)   |
 | Mohammad Hatif Osmani      | Frontend Developer     | [Github](https://github.com/hatif03)   |
