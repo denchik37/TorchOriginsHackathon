@@ -2,22 +2,31 @@
 
 import { gql, useQuery } from '@apollo/client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import * as d3 from 'd3';
 import { cn, formatTinybarsToHbar } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Maximize2 } from 'lucide-react';
+import { Maximize2, ZoomIn, ZoomOut, RotateCcw, Move } from 'lucide-react';
 import { KDEChartModal } from './kde-chart-modal';
 
 interface KDEChartProps {
   className?: string;
   currentPrice: number;
   enableZoom?: boolean;
+  onZoomChange?: (transform: d3.ZoomTransform) => void;
+  initialTransform?: d3.ZoomTransform;
+  showControls?: boolean; // New prop to control visibility of zoom controls
+}
+
+export interface KDEChartRef {
+  handleZoomIn: () => void;
+  handleZoomOut: () => void;
+  handleResetZoom: () => void;
 }
 
 const GET_BETS = gql`
   query {
-    bets(first: 100, orderBy: timestamp, orderDirection: desc) {
+    bets(first: 1000, orderBy: timestamp, orderDirection: desc) {
       targetTimestamp
       weight
       priceMin
@@ -27,11 +36,82 @@ const GET_BETS = gql`
   }
 `;
 
-export function KDEChart({ className, currentPrice, enableZoom = false }: KDEChartProps) {
+export const KDEChart = forwardRef<KDEChartRef, KDEChartProps>(({ 
+  className, 
+  currentPrice, 
+  enableZoom = false, 
+  onZoomChange,
+  initialTransform,
+  showControls = true // Default to showing controls
+}, ref) => {
   const { data } = useQuery(GET_BETS);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const d3Container = useRef({ initialized: false }).current;
+  const [zoomTransform, setZoomTransform] = useState<d3.ZoomTransform | undefined>(initialTransform || undefined);
+  const [isPanning, setIsPanning] = useState(false);
+
+  // Zoom controls
+  const handleZoomIn = useCallback(() => {
+    if (chartContainerRef.current) {
+      const svg = d3.select(chartContainerRef.current).select('svg') as any;
+      const zoom = d3.zoom().on('zoom', (event) => {
+        setZoomTransform(event.transform);
+        onZoomChange?.(event.transform);
+      });
+      svg.call(zoom.scaleBy, 1.5);
+    }
+  }, [onZoomChange]);
+
+  const handleZoomOut = useCallback(() => {
+    if (chartContainerRef.current) {
+      const svg = d3.select(chartContainerRef.current).select('svg') as any;
+      const zoom = d3.zoom().on('zoom', (event) => {
+        setZoomTransform(event.transform);
+        onZoomChange?.(event.transform);
+      });
+      svg.call(zoom.scaleBy, 1 / 1.5);
+    }
+  }, [onZoomChange]);
+
+  const handleResetZoom = useCallback(() => {
+    if (chartContainerRef.current) {
+      const svg = d3.select(chartContainerRef.current).select('svg') as any;
+      const zoom = d3.zoom().on('zoom', (event) => {
+        setZoomTransform(event.transform);
+        onZoomChange?.(event.transform);
+      });
+      svg.call(zoom.transform, d3.zoomIdentity);
+    }
+  }, [onZoomChange]);
+
+  const togglePan = useCallback(() => {
+    if (chartContainerRef.current) {
+      const svg = d3.select(chartContainerRef.current).select('svg') as any;
+      const zoom = d3.zoom().on('zoom', (event) => {
+        setZoomTransform(event.transform);
+        onZoomChange?.(event.transform);
+      });
+      
+      if (isPanning) {
+        svg.call(zoom.on('mousedown.zoom', null));
+        setIsPanning(false);
+      } else {
+        svg.call(zoom.on('mousedown.zoom', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        }));
+        setIsPanning(true);
+      }
+    }
+  }, [isPanning, onZoomChange]);
+
+  // Expose zoom methods to parent component
+  useImperativeHandle(ref, () => ({
+    handleZoomIn,
+    handleZoomOut,
+    handleResetZoom
+  }), [handleZoomIn, handleZoomOut, handleResetZoom]);
 
   useEffect(() => {
     if (!chartContainerRef.current || !data?.bets || data?.bets?.length === 0) {
@@ -125,8 +205,54 @@ export function KDEChart({ className, currentPrice, enableZoom = false }: KDECha
       .domain([stakeExtent[0], stakeExtent[1]])
       .range([0.4, 1.0]);
 
-    // Zoom functionality can be added back later if needed
-    // For now, we'll keep the chart simple and functional
+    // Enhanced zoom functionality with better mouse interaction
+    if (enableZoom) {
+      const zoom = d3.zoom()
+        .scaleExtent([0.1, 20]) // Increased max zoom for better exploration
+        .translateExtent([[0, 0], [width, height]])
+        .extent([[0, 0], [width, height]])
+        .wheelDelta((event) => {
+          // Custom wheel delta for smoother zooming
+          return -event.deltaY * (event.deltaMode ? 120 : 1) / 500;
+        })
+        .on('zoom', (event) => {
+          const { transform } = event;
+          setZoomTransform(transform);
+          onZoomChange?.(transform);
+          
+          // Apply zoom to chart elements
+          chartArea.attr('transform', transform);
+          
+          // Update axes
+          (svg.select('.x-axis') as any).call(
+            d3.axisBottom(x).scale(transform.rescaleX(x))
+          );
+          (svg.select('.y-axis') as any).call(
+            d3.axisLeft(y).scale(transform.rescaleY(y))
+          );
+          
+          // Update grid
+          (svg.select('.grid-x') as any).call(
+            d3.axisBottom(x).scale(transform.rescaleX(x)).tickSize(-height).tickFormat(() => '')
+          );
+          (svg.select('.grid-y') as any).call(
+            d3.axisLeft(y).scale(transform.rescaleY(y)).tickSize(-width).tickFormat(() => '')
+          );
+        });
+
+      (svg as any).call(zoom);
+      
+      // Apply initial transform if provided
+      if (initialTransform) {
+        (svg as any).call(zoom.transform, initialTransform);
+      }
+
+      // Add double-click to reset zoom
+      svg.on('dblclick.zoom', null); // Remove default double-click behavior
+      svg.on('dblclick', () => {
+        (svg as any).call(zoom.transform, d3.zoomIdentity);
+      });
+    }
 
     // Simplified grid with dark theme colors
     svg
@@ -312,6 +438,26 @@ export function KDEChart({ className, currentPrice, enableZoom = false }: KDECha
       )
       .style('opacity', 0);
 
+    // Add zoom info panel when zoom is enabled and controls are shown
+    if (enableZoom && showControls) {
+      const zoomInfoPanel = d3
+        .select(container)
+        .append('div')
+        .attr(
+          'class',
+          'absolute top-2 left-2 p-2 bg-neutral-800/90 backdrop-blur-sm border border-neutral-700 rounded text-xs text-neutral-300'
+        );
+      
+      zoomInfoPanel.html(`
+        <div class="font-semibold text-neutral-200 mb-1">Zoom Controls</div>
+        <div class="text-neutral-400 text-xs">
+          Scroll: Zoom in/out<br>
+          Drag: Pan around<br>
+          Double-click: Reset zoom
+        </div>
+      `);
+    }
+
     svg
       .append('rect')
       .attr('width', width)
@@ -334,13 +480,17 @@ export function KDEChart({ className, currentPrice, enableZoom = false }: KDECha
       focus.select("line.crosshair[y1='0']").attr('x1', pointerX).attr('x2', pointerX);
       focus.select("line.crosshair[x1='0']").attr('y1', pointerY).attr('y2', pointerY);
 
-      const timeVal = x.invert(pointerX);
-      const priceVal = y.invert(pointerY);
+      // Get the current scales (accounting for zoom)
+      const currentX = zoomTransform ? zoomTransform.rescaleX(x) : x;
+      const currentY = zoomTransform ? zoomTransform.rescaleY(y) : y;
+
+      const timeVal = currentX.invert(pointerX);
+      const priceVal = currentY.invert(pointerY);
 
       const radius = 40;
       const nearbyPoints = dataset.filter((d) => {
-        const dx = x(d.time) - pointerX;
-        const dy = y(d.price) - pointerY;
+        const dx = currentX(d.time) - pointerX;
+        const dy = currentY(d.price) - pointerY;
         return dx * dx + dy * dy < radius * radius;
       });
 
@@ -364,29 +514,76 @@ export function KDEChart({ className, currentPrice, enableZoom = false }: KDECha
       }
       metricsPanel.html(metricsHtml);
     }
-  }, [data]); // Effect dependency on data
+  }, [data, enableZoom, onZoomChange, initialTransform, zoomTransform, showControls]); // Effect dependency on data
 
   return (
     <div className={cn('w-full', className)}>
       <div className="flex items-center justify-between mb-2">
         <div className="text-xs text-neutral-400">Price prediction distribution by date</div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setIsModalOpen(true)}
-          className="text-xs h-7 px-2 text-neutral-400 hover:text-neutral-200 border-neutral-600 hover:border-neutral-500"
-        >
-          <Maximize2 className="h-3 w-3 mr-1" />
-          Expand
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Only show zoom controls if enableZoom is true AND showControls is true */}
+          {enableZoom && showControls && (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleZoomOut}
+                className="text-xs h-7 w-7 p-0 text-neutral-400 hover:text-neutral-200 border-neutral-600 hover:border-neutral-500"
+              >
+                <ZoomOut className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleZoomIn}
+                className="text-xs h-7 w-7 p-0 text-neutral-400 hover:text-neutral-200 border-neutral-600 hover:border-neutral-500"
+              >
+                <ZoomIn className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleResetZoom}
+                className="text-xs h-7 w-7 p-0 text-neutral-400 hover:text-neutral-200 border-neutral-600 hover:border-neutral-500"
+              >
+                <RotateCcw className="h-3 w-3" />
+              </Button>
+              <Button
+                variant={isPanning ? "default" : "outline"}
+                size="sm"
+                onClick={togglePan}
+                className="text-xs h-7 w-7 p-0 text-neutral-400 hover:text-neutral-200 border-neutral-600 hover:border-neutral-500"
+              >
+                <Move className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
+          {/* Only show expand button if showControls is true */}
+          {showControls && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsModalOpen(true)}
+              className="text-xs h-7 px-2 text-neutral-400 hover:text-neutral-200 border-neutral-600 hover:border-neutral-500"
+            >
+              <Maximize2 className="h-3 w-3 mr-1" />
+              Expand
+            </Button>
+          )}
+        </div>
       </div>
       <div ref={chartContainerRef} className="w-full h-full relative" />
 
-      <KDEChartModal
-        currentPrice={currentPrice}
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
+      {/* Only render modal if showControls is true */}
+      {showControls && (
+        <KDEChartModal
+          currentPrice={currentPrice}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+        />
+      )}
     </div>
   );
-}
+});
+
+KDEChart.displayName = 'KDEChart';
