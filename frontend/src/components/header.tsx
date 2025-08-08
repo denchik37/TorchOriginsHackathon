@@ -3,11 +3,20 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ExternalLink, Wallet, Settings, ChevronDown, TrendingUp, TrendingDown, Copy, Check, User } from 'lucide-react';
+import {
+  ExternalLink,
+  Wallet,
+  Settings,
+  ChevronDown,
+  TrendingUp,
+  TrendingDown,
+  Copy,
+  Check,
+  User,
+} from 'lucide-react';
 import { useWallet } from '@buidlerlabs/hashgraph-react-wallets';
 import { HashpackConnector } from '@buidlerlabs/hashgraph-react-wallets/connectors';
 import { Button } from '@/components/ui/button';
-import { ThemeToggle } from '@/components/theme-toggle';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,10 +37,11 @@ export function Header() {
 
   const handleCopyAddress = async () => {
     // Try to get the address from various possible properties
-    const address = (currentWalletState as any)?.accountId || 
-                   (currentWalletState as any)?.address || 
-                   (currentWalletState as any)?.account?.id ||
-                   (currentWalletState as any)?.account?.address;
+    const address =
+      (currentWalletState as any)?.accountId ||
+      (currentWalletState as any)?.address ||
+      (currentWalletState as any)?.account?.id ||
+      (currentWalletState as any)?.account?.address;
     if (address) {
       await navigator.clipboard.writeText(address);
       setCopied(true);
@@ -40,10 +50,12 @@ export function Header() {
   };
 
   // Try to get the wallet address from various possible properties
-  const walletAddress = (currentWalletState as any)?.accountId || 
-                       (currentWalletState as any)?.address || 
-                       (currentWalletState as any)?.account?.id ||
-                       (currentWalletState as any)?.account?.address || '';
+  const walletAddress =
+    (currentWalletState as any)?.accountId ||
+    (currentWalletState as any)?.address ||
+    (currentWalletState as any)?.account?.id ||
+    (currentWalletState as any)?.account?.address ||
+    '';
 
   return (
     <header className="border-b border-border bg-neutral-950 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -81,9 +93,7 @@ export function Header() {
           {currentWalletState.isConnected ? (
             <>
               <div className="flex items-center space-x-2">
-                <span className="text-sm font-medium text-light-gray">
-                  HBAR Balance
-                </span>
+                <span className="text-sm font-medium text-light-gray">HBAR Balance</span>
                 <Button
                   variant="outline"
                   size="sm"
@@ -104,12 +114,8 @@ export function Header() {
                     onClick={handleCopyAddress}
                   >
                     <User className="w-3 h-3" />
-                    <span className="text-xs font-mono">
-                      {formatAddress(walletAddress, 4)}
-                    </span>
-                    {copied && (
-                      <Check className="w-3 h-3 text-green-400" />
-                    )}
+                    <span className="text-xs font-mono">{formatAddress(walletAddress, 4)}</span>
+                    {copied && <Check className="w-3 h-3 text-green-400" />}
                   </Button>
                 </Tooltip>
               )}
@@ -125,15 +131,15 @@ export function Header() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => currentWalletState.disconnect()}>Disconnect</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => currentWalletState.disconnect()}>
+                    Disconnect
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </>
           ) : (
             <WalletSelector />
           )}
-
-          <ThemeToggle />
 
           <Button variant="ghost" size="icon">
             <Settings className="w-4 h-4" />
