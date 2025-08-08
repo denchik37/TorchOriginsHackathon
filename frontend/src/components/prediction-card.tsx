@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
-
-import { ExternalLink, Minus, Plus, AlertTriangle } from 'lucide-react';
+import { gql, useQuery } from '@apollo/client';
+import { Minus, Plus, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -15,15 +15,41 @@ import { BetPlacingModal } from '@/components/bet-placing-modal';
 import { BetPlacedModal } from '@/components/bet-placed-modal';
 import { useHbarPrice } from '@/hooks/useHbarPrice';
 import { HbarPriceDisplay } from '@/components/hbar-price-display';
+import { Bet } from '@/lib/types';
 
 interface PredictionCardProps {
   className?: string;
 }
 
+const GET_BETS_BY_TIMESTAMP = gql`
+  query GetBetsByTimestamp($startTimestamp: Int!, $endTimestamp: Int!) {
+    bets(where: { timestamp_gte: $startTimestamp, timestamp_lte: $endTimestamp }) {
+      id
+      stake
+      priceMin
+      priceMax
+      timestamp
+    }
+  }
+`;
+function getTimestampRange(date: Date, timeStr: string) {
+  const [hours, minutes] = timeStr.split(':').map(Number);
+
+  const start = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), hours, minutes, 0)
+  );
+  const end = new Date(start.getTime() + 60 * 60 * 1000 - 1);
+
+  return {
+    startUnix: Math.floor(start.getTime() / 1000),
+    endUnix: Math.floor(end.getTime() / 1000),
+  };
+}
+
 export function PredictionCard({ className }: PredictionCardProps) {
   const [activeTab, setActiveTab] = useState('bet');
   const [selectedRange, setSelectedRange] = useState({
-    min: 0.2475,
+    min: 0.0,
     max: 0.2843,
   });
   const [depositAmount, setDepositAmount] = useState('');
@@ -32,7 +58,14 @@ export function PredictionCard({ className }: PredictionCardProps) {
   const [isPlacingBet, setIsPlacingBet] = useState(false);
   const [isBetPlaced, setIsBetPlaced] = useState(false);
 
+  const { startUnix, endUnix } = getTimestampRange(resolutionDate, resolutionTime);
+
   const { price: currentPrice, isLoading: priceLoading, error: priceError } = useHbarPrice();
+
+  const { data, loading, error } = useQuery(GET_BETS_BY_TIMESTAMP, {
+    // variables: { startTimestamp: startUnix, endTimestamp: endUnix },
+    variables: { startTimestamp: '1754472860', endTimestamp: '1754579194' },
+  });
 
   const totalBets = 1300;
   const activeBets = 375;
@@ -147,6 +180,18 @@ export function PredictionCard({ className }: PredictionCardProps) {
   const protocolFee = parseFloat(depositAmount || '0') * 0.005; // 0.5%
   const hasValidAmount = depositAmount && parseFloat(depositAmount) > 0;
 
+  useEffect(() => {
+    console.log(data);
+    if (data?.bets?.length) {
+      const prices = data.bets.flatMap((bet: Bet) => [bet.priceMin, bet.priceMax]);
+
+      const minPrice = Math.min(...prices) / 10000;
+      const maxPrice = Math.max(...prices) / 10000;
+
+      setSelectedRange({ min: minPrice, max: maxPrice });
+    }
+  }, [data]);
+
   return (
     <Card className={className}>
       <CardHeader>
@@ -250,9 +295,10 @@ export function PredictionCard({ className }: PredictionCardProps) {
             </div>
 
             {/* Price Range Selection */}
+
             <PriceRangeSelector
-              minPrice={0.2}
-              maxPrice={0.34}
+              minPrice={selectedRange.min}
+              maxPrice={selectedRange.max}
               currentPrice={currentPrice}
               totalBets={totalBets}
               onRangeChange={handleRangeChange}
