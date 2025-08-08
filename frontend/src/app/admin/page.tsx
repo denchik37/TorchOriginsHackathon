@@ -149,7 +149,7 @@ function AdminPage() {
                   </tr>
                 </thead>
                 <tbody className="max-h-[600px] overflow-y-auto">
-                  {data.bets.map((bet: Bet) => {
+                  {data?.bets?.map((bet: Bet) => {
                     const resolution = findClosestPrice(bet.targetTimestamp);
                     const isInRange =
                       resolution !== null &&
