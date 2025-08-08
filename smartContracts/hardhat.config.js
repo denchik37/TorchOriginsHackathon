@@ -97,6 +97,12 @@ task("claim-bet", "Claim winnings for a finalized bet")
     return claimBet(taskArgs.contractAddress, taskArgs.betId);
   });
 
+task("place-10-bets", "Place 10 bets with delays")
+  .setAction(async () => {
+    const place10BetsWithDelay = require("./scripts/place10BetsWithDelay");
+    return place10BetsWithDelay();
+  });
+
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   mocha: {
@@ -130,12 +136,12 @@ module.exports = {
     /**
      * Uncomment the following to add a mainnet network configuration
      */
-    //   mainnet: {
-    //     // HashIO mainnet endpoint from the MAINNET_ENDPOINT variable in the .env file
-    //     url: process.env.MAINNET_ENDPOINT,
-    //     // Your ECDSA account private key pulled from the .env file
-    //     accounts: [process.env.MAINNET_OPERATOR_PRIVATE_KEY],
-    //   },
+    mainnet: {
+      // HashIO mainnet endpoint from the MAINNET_ENDPOINT variable in the .env file
+      url: process.env.MAINNET_ENDPOINT,
+      // Your ECDSA account private key pulled from the .env file
+      accounts: [process.env.MAINNET_OPERATOR_PRIVATE_KEY],
+    },
 
     /**
      * Uncomment the following to add a previewnet network configuration
