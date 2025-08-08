@@ -139,7 +139,7 @@ export function PredictionCard({ className }: PredictionCardProps) {
       // Convert timestamp to string
       const targetTimestamp = startUnix.toString();
 
-      const betId = await writeContract({
+      const betId = (await writeContract({
         contractId: ContractId.fromString('0.0.9570085'),
         abi: TorchPredictionMarketABI.abi,
         functionName: 'placeBet',
@@ -148,18 +148,19 @@ export function PredictionCard({ className }: PredictionCardProps) {
           gas: 500000,
           amount: Number(depositAmount),
         },
-      });
+      })) as string;
 
       watch(betId, {
-        onSuccess: (receipt) => {
+        onSuccess: (transaction) => {
           setIsBetPlaced(true);
           setIsPlacingBet(false);
+          return transaction;
         },
-        onError: (receipt, error: { args: string[] }) => {
+        onError: (receipt, error) => {
           console.error('Transaction failed or timed out', error);
-          const message = error.args;
           setIsPlacingBet(false);
-          setBetError(`Transaction failed or timed out: ${message}`);
+          setBetError(`Transaction failed or timed out: ${error}`);
+          return receipt;
         },
       });
     } catch (err) {
