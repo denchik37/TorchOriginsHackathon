@@ -129,10 +129,6 @@ export function Header() {
           ) : (
             <WalletSelector />
           )}
-
-          <Button variant="ghost" size="icon">
-            <Settings className="w-4 h-4" />
-          </Button>
         </div>
       </div>
     </header>
