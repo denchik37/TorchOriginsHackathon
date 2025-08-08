@@ -173,7 +173,7 @@ export function PredictionCard({ className }: PredictionCardProps) {
 
   const handleViewExplorer = () => {
     // Open transaction in explorer (mock implementation)
-    window.open('https://explorer.hedera.com', '_blank');
+    window.open('https://hederaexplorer.io/', '_blank');
   };
 
   const closeBetPlacingModal = () => {
