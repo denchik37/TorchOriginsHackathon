@@ -145,7 +145,6 @@ export function PredictionCard({ className }: PredictionCardProps) {
         metaArgs: {
           gas: 150000,
           amount: Number(depositAmount),
-          maxTransactionFee: maxFeeInTinybars,
         },
       });
 
