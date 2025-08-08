@@ -135,13 +135,18 @@ export function PredictionCard({ className }: PredictionCardProps) {
       //   throw new Error(simulation?.errorMessage || 'Bet simulation failed');
       // }
 
+      const depositAmountInTinybars = Math.floor(Number(depositAmount) * 1e8);
+      const maxFeeInTinybars = Math.floor(2 * 1e8);
+
       const betId = await writeContract({
         contractId: ContractId.fromString('0.0.9570085'),
         abi: TorchPredictionMarketABI.abi,
         functionName: 'placeBet',
         args: [targetTimestamp, priceMin, priceMax],
         metaArgs: {
-          amount: Number(depositAmount),
+          gas: 150000,
+          amount: depositAmountInTinybars,
+          maxTransactionFee: maxFeeInTinybars,
         },
       });
 
