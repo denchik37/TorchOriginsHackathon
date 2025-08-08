@@ -18,7 +18,7 @@ const GET_BETS = gql`
       stake
       priceMin
       priceMax
-      timestamp
+      targetTimestamp
     }
   }
 `;
@@ -79,7 +79,7 @@ export function BetHistory({ className }: BetHistoryProps) {
                     {formatTinybarsToHbar(bet.priceMin)} - {formatTinybarsToHbar(bet.priceMax)}
                   </td>
                   <td className="py-3 px-4 text-sm text-medium-gray">
-                    {formatDateUTC(bet.timestamp)}
+                    {formatDateUTC(bet.targetTimestamp)}
                   </td>
                 </tr>
               ))}
