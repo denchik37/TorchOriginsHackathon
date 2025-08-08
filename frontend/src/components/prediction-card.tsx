@@ -63,7 +63,7 @@ export function PredictionCard({ className }: PredictionCardProps) {
 
   const [activeTab, setActiveTab] = useState('bet');
   const [selectedRange, setSelectedRange] = useState({
-    min: 0.0,
+    min: 0.01,
     max: 0.2843,
   });
   const [depositAmount, setDepositAmount] = useState('0');
@@ -145,8 +145,8 @@ export function PredictionCard({ className }: PredictionCardProps) {
         functionName: 'placeBet',
         args: [targetTimestamp, priceMin, priceMax],
         metaArgs: {
-          gas: 150000,
-          amount: amountInTinybars,
+          gas: 500000,
+          amount: Number(depositAmount),
         },
       });
 
@@ -269,7 +269,6 @@ export function PredictionCard({ className }: PredictionCardProps) {
   const canPlaceBet = hasValidAmount && isWalletConnected && !contractLoading;
 
   useEffect(() => {
-    console.log(data);
     if (data?.bets?.length) {
       const prices = data.bets.flatMap((bet: Bet) => [bet.priceMin, bet.priceMax]);
 
