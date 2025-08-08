@@ -29,9 +29,15 @@ import { formatAddress } from '@/lib/utils';
 import { WalletSelector } from '@/components/wallet-selector';
 import { AccountDetailsModal } from '@/components/account-details-modal';
 import { useMultiWallet } from '@/hooks/useMultiWallet';
+import { useWallet, useBalance } from '@buidlerlabs/hashgraph-react-wallets';
 
 export function Header() {
-  const { currentWalletState, currentAccountId, currentAccountInfo, balance, balanceLoading } = useMultiWallet();
+  const { isConnected } = useWallet();
+  const { data } = useBalance({ autoFetch: isConnected });
+  const balance = data?.value?.toFixed(2) ?? 0;
+
+  const { currentWalletState, currentAccountId, currentAccountInfo, balanceLoading } =
+    useMultiWallet();
   const [copied, setCopied] = React.useState(false);
 
   const handleCopyAddress = async () => {
@@ -45,12 +51,12 @@ export function Header() {
   // Get display address - prefer accountId for Hedera native wallets, address for others
   const getDisplayAddress = () => {
     if (!currentAccountInfo) return '';
-    
+
     // For Hedera native wallets (hashpack, blade), show accountId
     if (currentAccountInfo.walletType === 'hashpack' || currentAccountInfo.walletType === 'blade') {
       return currentAccountInfo.accountId || currentAccountInfo.address;
     }
-    
+
     // For non-Hedera wallets (metamask, walletconnect, kabila), show address
     return currentAccountInfo.address || currentAccountInfo.accountId;
   };
@@ -99,7 +105,7 @@ export function Header() {
             </Button>
           </Link> */}
 
-          {currentWalletState.isConnected ? (
+          {isConnected ? (
             <>
               {/* Balance Display */}
               <div className="flex items-center space-x-2">
