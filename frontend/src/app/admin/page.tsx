@@ -15,7 +15,7 @@ import { Card, CardContent } from '@/components/ui/card';
 
 const GET_BETS = gql`
   query {
-    bets(first: 100, orderBy: timestamp, orderDirection: desc) {
+    bets(orderBy: timestamp, orderDirection: desc) {
       id
       stake
       priceMin
