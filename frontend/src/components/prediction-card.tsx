@@ -19,6 +19,7 @@ import { HbarPriceDisplay } from '@/components/hbar-price-display';
 import { Bet } from '@/lib/types';
 import { ContractId, TransactionReceipt } from '@hashgraph/sdk';
 import { ethers } from 'ethers';
+import { parseUnits } from 'ethers/lib/utils';
 
 import { useWallet, useBalance, useWriteContract } from '@buidlerlabs/hashgraph-react-wallets';
 
@@ -135,7 +136,8 @@ export function PredictionCard({ className }: PredictionCardProps) {
       //   throw new Error(simulation?.errorMessage || 'Bet simulation failed');
       // }
 
-      const maxFeeInTinybars = Math.floor(2 * 1e8);
+      const tinybarsPerHbar = 100_000_000;
+      const amountInTinybars = Number(depositAmount) * tinybarsPerHbar;
 
       const betId = await writeContract({
         contractId: ContractId.fromString('0.0.9570085'),
@@ -144,7 +146,7 @@ export function PredictionCard({ className }: PredictionCardProps) {
         args: [targetTimestamp, priceMin, priceMax],
         metaArgs: {
           gas: 150000,
-          amount: Number(depositAmount),
+          amount: amountInTinybars,
         },
       });
 
