@@ -135,7 +135,6 @@ export function PredictionCard({ className }: PredictionCardProps) {
       //   throw new Error(simulation?.errorMessage || 'Bet simulation failed');
       // }
 
-      const depositAmountInTinybars = Math.floor(Number(depositAmount) * 1e8);
       const maxFeeInTinybars = Math.floor(2 * 1e8);
 
       const betId = await writeContract({
@@ -145,7 +144,7 @@ export function PredictionCard({ className }: PredictionCardProps) {
         args: [targetTimestamp, priceMin, priceMax],
         metaArgs: {
           gas: 150000,
-          amount: depositAmountInTinybars,
+          amount: Number(depositAmount),
           maxTransactionFee: maxFeeInTinybars,
         },
       });
