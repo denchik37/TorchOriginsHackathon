@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
-
-import { ExternalLink, Minus, Plus, AlertTriangle } from 'lucide-react';
+import { gql, useQuery } from '@apollo/client';
+import { Minus, Plus, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -14,16 +14,45 @@ import { BetHistory } from '@/components/bet-history';
 import { BetPlacingModal } from '@/components/bet-placing-modal';
 import { BetPlacedModal } from '@/components/bet-placed-modal';
 import { useHbarPrice } from '@/hooks/useHbarPrice';
+import { useTorchPredictionMarket } from '@/hooks/useTorchPredictionMarket';
 import { HbarPriceDisplay } from '@/components/hbar-price-display';
+import { Bet } from '@/lib/types';
+import { ethers } from 'ethers';
 
 interface PredictionCardProps {
   className?: string;
 }
 
+const GET_BETS_BY_TIMESTAMP = gql`
+  query GetBetsByTimestamp($startTimestamp: Int!, $endTimestamp: Int!) {
+    bets(where: { timestamp_gte: $startTimestamp, timestamp_lte: $endTimestamp }) {
+      id
+      stake
+      priceMin
+      priceMax
+      timestamp
+    }
+  }
+`;
+
+function getTimestampRange(date: Date, timeStr: string) {
+  const [hours, minutes] = timeStr.split(':').map(Number);
+
+  const start = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), hours, minutes, 0)
+  );
+  const end = new Date(start.getTime() + 60 * 60 * 1000 - 1);
+
+  return {
+    startUnix: Math.floor(start.getTime() / 1000),
+    endUnix: Math.floor(end.getTime() / 1000),
+  };
+}
+
 export function PredictionCard({ className }: PredictionCardProps) {
   const [activeTab, setActiveTab] = useState('bet');
   const [selectedRange, setSelectedRange] = useState({
-    min: 0.2475,
+    min: 0.0,
     max: 0.2843,
   });
   const [depositAmount, setDepositAmount] = useState('');
@@ -31,8 +60,27 @@ export function PredictionCard({ className }: PredictionCardProps) {
   const [resolutionTime, setResolutionTime] = useState('13:00');
   const [isPlacingBet, setIsPlacingBet] = useState(false);
   const [isBetPlaced, setIsBetPlaced] = useState(false);
+  const [betId, setBetId] = useState<string | null>(null);
+  const [betError, setBetError] = useState<string | null>(null);
+
+  const { startUnix, endUnix } = getTimestampRange(resolutionDate, resolutionTime);
 
   const { price: currentPrice, isLoading: priceLoading, error: priceError } = useHbarPrice();
+  
+  // Use the contract hook
+  const {
+    placeBet,
+    simulatePlaceBet,
+    loading: contractLoading,
+    error: contractError,
+    isConnected,
+    clearError
+  } = useTorchPredictionMarket();
+
+  const { data, loading, error } = useQuery(GET_BETS_BY_TIMESTAMP, {
+    variables: { startTimestamp: startUnix, endTimestamp: endUnix },
+    // variables: { startTimestamp: '1754472860', endTimestamp: '1754579194' },
+  });
 
   const totalBets = 1300;
   const activeBets = 375;
@@ -47,15 +95,61 @@ export function PredictionCard({ className }: PredictionCardProps) {
   };
 
   const handlePlaceBet = async () => {
-    if (!depositAmount || parseFloat(depositAmount) <= 0) return;
+    if (!depositAmount || parseFloat(depositAmount) <= 0) {
+      setBetError('Please enter a valid deposit amount');
+      return;
+    }
+
+    if (!isConnected) {
+      setBetError('Please connect your wallet first');
+      return;
+    }
 
     setIsPlacingBet(true);
+    setBetError(null);
+    clearError();
 
-    // Simulate bet placement process
-    setTimeout(() => {
+    try {
+      // Convert price range to wei (assuming prices are in USD, we need to convert to contract format)
+      const priceMin = ethers.utils.parseUnits(selectedRange.min.toString(), 8); // 8 decimals for price
+      const priceMax = ethers.utils.parseUnits(selectedRange.max.toString(), 8);
+      
+      // Convert timestamp to string
+      const targetTimestamp = startUnix.toString();
+
+      // Simulate the bet first to check if it's valid
+      const simulation = await simulatePlaceBet(
+        targetTimestamp,
+        priceMin.toString(),
+        priceMax.toString(),
+        depositAmount
+      );
+
+      if (!simulation || !simulation.isValid) {
+        throw new Error(simulation?.errorMessage || 'Bet simulation failed');
+      }
+
+      // Place the actual bet
+      const betId = await placeBet(
+        targetTimestamp,
+        priceMin.toString(),
+        priceMax.toString(),
+        depositAmount
+      );
+
+      if (betId) {
+        setBetId(betId);
+        setIsBetPlaced(true);
+      } else {
+        throw new Error('Failed to place bet - no bet ID returned');
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to place bet';
+      setBetError(errorMessage);
+      console.error('Bet placement error:', err);
+    } finally {
       setIsPlacingBet(false);
-      setIsBetPlaced(true);
-    }, 3000);
+    }
   };
 
   const handleViewExplorer = () => {
@@ -65,10 +159,12 @@ export function PredictionCard({ className }: PredictionCardProps) {
 
   const closeBetPlacingModal = () => {
     setIsPlacingBet(false);
+    setBetError(null);
   };
 
   const closeBetPlacedModal = () => {
     setIsBetPlaced(false);
+    setBetId(null);
     // Reset form
     setDepositAmount('');
   };
@@ -144,8 +240,39 @@ export function PredictionCard({ className }: PredictionCardProps) {
   };
 
   const { sharpness, leadTime, betQuality } = calculateMultipliers();
-  const protocolFee = parseFloat(depositAmount || '0') * 0.005; // 0.5%
-  const hasValidAmount = depositAmount && parseFloat(depositAmount) > 0;
+
+  // Validation
+  const hasValidAmount = depositAmount && parseFloat(depositAmount) > 0 && parseFloat(depositAmount) <= balance;
+  const isWalletConnected = isConnected;
+  const canPlaceBet = hasValidAmount && isWalletConnected && !contractLoading;
+
+  // Show error if wallet is not connected
+  useEffect(() => {
+    if (!isWalletConnected) {
+      setBetError('Please connect your wallet to place bets');
+    } else {
+      setBetError(null);
+    }
+  }, [isWalletConnected]);
+
+  // Show contract errors
+  useEffect(() => {
+    if (contractError) {
+      setBetError(contractError);
+    }
+  }, [contractError]);
+
+  useEffect(() => {
+    console.log(data);
+    if (data?.bets?.length) {
+      const prices = data.bets.flatMap((bet: Bet) => [bet.priceMin, bet.priceMax]);
+
+      const minPrice = Math.min(...prices) / 10000;
+      const maxPrice = Math.max(...prices) / 10000;
+
+      setSelectedRange({ min: minPrice, max: maxPrice });
+    }
+  }, [data]);
 
   return (
     <Card className={className}>
@@ -250,9 +377,10 @@ export function PredictionCard({ className }: PredictionCardProps) {
             </div>
 
             {/* Price Range Selection */}
+
             <PriceRangeSelector
-              minPrice={0.2}
-              maxPrice={0.34}
+              minPrice={selectedRange.min}
+              maxPrice={selectedRange.max}
               currentPrice={currentPrice}
               totalBets={totalBets}
               onRangeChange={handleRangeChange}
@@ -319,7 +447,7 @@ export function PredictionCard({ className }: PredictionCardProps) {
               <div className="flex justify-between py-3 px-4 border border-white/5 rounded-lg text-sm">
                 <span className="text-medium-gray">Protocol fee:</span>
                 <span className="text-white">
-                  0.5% <span className="text-medium-gray">({protocolFee.toFixed(4)} HBAR)</span>
+                  0.5% <span className="text-medium-gray">({(parseFloat(depositAmount) * 0.005).toFixed(4)} HBAR)</span>
                 </span>
               </div>
             </div>
@@ -337,14 +465,38 @@ export function PredictionCard({ className }: PredictionCardProps) {
               </div>
             )}
 
+            {/* Error Message */}
+            {betError && (
+              <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3">
+                <div className="flex items-start space-x-2">
+                  <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-red-100">
+                    {betError}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Wallet Connection Status */}
+            {!isWalletConnected && (
+              <div className="bg-blue-500/20 border border-blue-500/30 rounded-lg p-3">
+                <div className="flex items-start space-x-2">
+                  <AlertTriangle className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-blue-100">
+                    Please connect your wallet to place bets
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Submit Button */}
             <Button
               className="w-full bg-vibrant-purple hover:bg-vibrant-purple/90 text-white"
               size="lg"
               onClick={handlePlaceBet}
-              disabled={!hasValidAmount}
+              disabled={!canPlaceBet}
             >
-              {hasValidAmount ? 'Bet' : 'Enter Amount'}
+              {contractLoading ? 'Processing...' : canPlaceBet ? 'Place Bet' : 'Connect Wallet'}
             </Button>
           </TabsContent>
 

@@ -19,9 +19,15 @@ services:
       postgres_pass: 'let-me-in'
       postgres_db: 'graph-node'
       ipfs: 'ipfs:5001'
-      ethereum: 'mainnet:https://mainnet.hashio.io/api'
-      GRAPH_LOG: info
-      GRAPH_ETHEREUM_GENESIS_BLOCK_NUMBER: 1
+      ethereum: 'mainnet:https://mainnet.hedera.validationcloud.io/v1/KtASCS3AQR1EMBH53M-8_jRuHsGP1uKPMhnAJLHTefE'
+      ETHEREUM_REORG_THRESHOLD: 1
+      ETHEREUM_POLLING_INTERVAL: 1000
+      RUST_LOG: INFO
+      GRAPH_LOG: ${GRAPHNODE_LOGLEVEL:-DEBUG}
+      GRAPH_ETHEREUM_MAX_BLOCK_RANGE_SIZE: ${GRAPH_ETHEREUM_MAX_BLOCK_RANGE_SIZE:-300}
+      GRAPH_ETHEREUM_JSON_RPC_TIMEOUT: 15
+      GRAPH_ETHEREUM_GENESIS_BLOCK_NUMBER: 0
+      GRAPH_ETHEREUM_BLOCK_INGESTOR_MAX_CONCURRENT_JSON_RPC_CALLS_FOR_TXN_RECEIPTS: 256
   ipfs:
     image: ipfs/go-ipfs:v0.10.0
     ports:

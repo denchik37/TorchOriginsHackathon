@@ -4,7 +4,6 @@ import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import ContextProvider from '../../context';
 import ApolloProviderClient from '@/components/apollo-client-provider';
-import client from '@/lib/apolloClient';
 
 const inter = Inter({ subsets: ['latin'] });
 

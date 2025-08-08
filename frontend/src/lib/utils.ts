@@ -1,8 +1,6 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-const TINYBARS_PER_HBAR = 100_000_000;
-
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -39,9 +37,9 @@ export function formatDateUTC(date: number): string {
   return new Date(date * 1000).toLocaleString('en-US', options);
 }
 
-export function formatTinybarsToHbar(tinybars: number) {
-  const hbar = tinybars / TINYBARS_PER_HBAR;
-  return hbar.toFixed(6);
+export function formatTinybarsToHbar(tinybars: number | string, fractionDigits = 6) {
+  const hbar = Number(tinybars) / 10000;
+  return hbar.toFixed(fractionDigits);
 }
 
 export function getRemainingDaysBetweenTimestamps(startTimestamp: number, endTimestamp: number) {

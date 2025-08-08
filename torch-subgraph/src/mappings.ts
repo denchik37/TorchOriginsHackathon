@@ -1,94 +1,194 @@
+import { BigInt, Address, log } from "@graphprotocol/graph-ts"
 import {
-  BetPlaced as BetPlacedEvent,
-  BetFinalized as BetFinalizedEvent,
-  BetClaimed as BetClaimedEvent,
-  FeeCollected as FeeCollectedEvent,
+  BetPlaced,
+  BetFinalized,
+  BetClaimed,
+  FeeCollected,
   TorchPredictionMarket
 } from "../generated/TorchPredictionMarket/TorchPredictionMarket"
-import { Bet, Fee, User } from "../generated/schema"
-import { BigInt } from "@graphprotocol/graph-ts"
+import { User, UserStats, Bet, Fee } from "../generated/schema"
 
-export function handleBetPlaced(event: BetPlacedEvent): void {
-  let id = event.params.betId.toString()
-  let entity = new Bet(id)
+// Helper to load or create immutable User + mutable UserStats
+function getOrCreateUser(address: Address): UserStats {
+  let userId = address.toHexString()
 
-  entity.user = event.params.bettor.toHexString()
-  entity.bucket = event.params.bucket.toI32()
-  entity.stake = event.params.stake
-  entity.priceMin = event.params.priceMin
-  entity.priceMax = event.params.priceMax
-  entity.targetTimestamp = event.params.targetTimestamp
-
-  // Fetch full bet data from contract
-  let contract = TorchPredictionMarket.bind(event.address)
-  let betResult = contract.getBet(event.params.betId)
-
-  entity.qualityBps = betResult.qualityBps
-  entity.weight = betResult.weight
-  entity.finalized = betResult.finalized
-  entity.claimed = betResult.claimed
-  entity.actualPrice = betResult.actualPrice
-  entity.won = betResult.won
-  entity.payout = BigInt.zero() // will be updated on claim
-
-  entity.blockNumber = event.block.number
-  entity.timestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-
-  // Update User stats
-  let userId = event.params.bettor.toHexString()
+  // Immutable user
   let user = User.load(userId)
-  if (!user) {
+  if (user == null) {
+    log.info("[User] Creating new User entity: {}", [userId])
     user = new User(userId)
-    user.totalBets = 0
-    user.totalWon = 0
-    user.totalStaked = BigInt.zero()
-    user.totalPayout = BigInt.zero()
+    user.save()
+  } else {
+    log.info("[User] Found existing User entity: {}", [userId])
   }
-  user.totalBets += 1
-  user.totalStaked = user.totalStaked.plus(event.params.stake)
-  user.save()
+
+  // Mutable stats
+  let stats = UserStats.load(userId)
+  if (stats == null) {
+    log.info("[UserStats] Creating new UserStats for: {}", [userId])
+    stats = new UserStats(userId)
+    stats.totalBets = 0
+    stats.totalWon = 0
+    stats.totalStaked = BigInt.zero()
+    stats.totalPayout = BigInt.zero()
+  } else {
+    log.info("[UserStats] Loaded existing UserStats for: {}", [userId])
+  }
+
+  return stats
 }
 
-export function handleBetFinalized(event: BetFinalizedEvent): void {
-  let bet = Bet.load(event.params.betId.toString())
-  if (!bet) return
+// BetPlaced
+export function handleBetPlaced(event: BetPlaced): void {
+  log.info("[BetPlaced] Handling bet from user {} with betId {}", [
+    event.params.bettor.toHexString(),
+    event.params.betId.toString()
+  ])
 
-  bet.actualPrice = event.params.actualPrice
-  bet.won = event.params.won
-  bet.finalized = true
-  bet.payout = event.params.payout
+  let stats = getOrCreateUser(event.params.bettor)
+
+  // Bind contract to call getBet()
+  let contract = TorchPredictionMarket.bind(event.address)
+  let betDataResult = contract.try_getBet(event.params.betId)
+  if (betDataResult.reverted) {
+    log.warning("[BetPlaced] Contract call getBet({}) reverted", [event.params.betId.toString()])
+    return
+  }
+  let betData = betDataResult.value
+
+  let betId = event.params.betId.toString()
+  let bet = new Bet(betId)
+
+  bet.user = event.params.bettor.toHexString()
+  bet.bucket = event.params.bucket.toI32()
+  bet.stake = betData.stake
+  bet.priceMin = betData.priceMin
+  bet.priceMax = betData.priceMax
+  bet.targetTimestamp = betData.targetTimestamp
+  bet.qualityBps = betData.qualityBps
+  bet.weight = betData.weight
+  bet.finalized = betData.finalized
+  bet.claimed = betData.claimed
+  bet.actualPrice = betData.actualPrice
+  bet.won = betData.won
+  bet.payout = BigInt.zero()  // payout is likely zero until finalized/claimed
+
+  bet.blockNumber = event.block.number
+  bet.timestamp = event.block.timestamp
+  bet.transactionHash = event.transaction.hash
 
   bet.save()
 
-  if (bet.won) {
-    let user = User.load(bet.user)!
-    user.totalWon += 1
-    user.save()
+  log.info("[BetPlaced] Saved Bet entity {} for user {}", [
+    betId,
+    event.params.bettor.toHexString()
+  ])
+
+  // Update stats
+  stats.totalBets += 1
+  stats.totalStaked = stats.totalStaked.plus(bet.stake)
+  stats.save()
+
+  log.info("[BetPlaced] Updated UserStats for {} | totalBets={} totalStaked={}", [
+    event.params.bettor.toHexString(),
+    stats.totalBets.toString(),
+    stats.totalStaked.toString()
+  ])
+}
+
+// BetFinalized (no changes needed)
+export function handleBetFinalized(event: BetFinalized): void {
+  log.info("[BetFinalized] betId={} actualPrice={} won={} payout={}", [
+    event.params.betId.toString(),
+    event.params.actualPrice.toString(),
+    event.params.won ? "true" : "false",
+    event.params.payout.toString()
+  ])
+
+  let betId = event.params.betId.toString()
+  let bet = Bet.load(betId)
+  if (bet == null) {
+    log.warning("[BetFinalized] Bet {} not found", [betId])
+    return
+  }
+
+  bet.finalized = true
+  bet.actualPrice = event.params.actualPrice
+  bet.won = event.params.won
+  bet.payout = event.params.payout
+  bet.save()
+
+  log.info("[BetFinalized] Updated Bet {} as finalized", [betId])
+
+  if (event.params.won) {
+    let stats = UserStats.load(bet.user)
+    if (stats) {
+      stats.totalWon += 1
+      stats.totalPayout = stats.totalPayout.plus(event.params.payout)
+      stats.save()
+
+      log.info("[BetFinalized] User {} won | totalWon={} totalPayout={}", [
+        bet.user,
+        stats.totalWon.toString(),
+        stats.totalPayout.toString()
+      ])
+    } else {
+      log.warning("[BetFinalized] No UserStats found for winner {}", [bet.user])
+    }
   }
 }
 
-export function handleBetClaimed(event: BetClaimedEvent): void {
-  let bet = Bet.load(event.params.betId.toString())
-  if (!bet) return
+// BetClaimed
+export function handleBetClaimed(event: BetClaimed): void {
+  log.info("[BetClaimed] betId={} claimed by {}", [
+    event.params.betId.toString(),
+    event.params.bettor.toHexString()
+  ])
+
+  let betId = event.params.betId.toString()
+  let bet = Bet.load(betId)
+  if (bet == null) {
+    log.warning("[BetClaimed] Bet {} not found", [betId])
+    return
+  }
 
   bet.claimed = true
   bet.payout = event.params.payout
   bet.save()
 
-  let user = User.load(bet.user)!
-  user.totalPayout = user.totalPayout.plus(event.params.payout)
-  user.save()
+  // Update user stats payout
+  let stats = UserStats.load(event.params.bettor.toHexString())
+  if (stats == null) {
+    log.warning("[BetClaimed] No UserStats found for user {}", [event.params.bettor.toHexString()])
+    return
+  }
+  stats.totalPayout = stats.totalPayout.plus(event.params.payout)
+  stats.save()
+
+  log.info("[BetClaimed] Bet {} marked as claimed, updated payout for user {}", [
+    betId,
+    event.params.bettor.toHexString()
+  ])
 }
 
-export function handleFeeCollected(event: FeeCollectedEvent): void {
-  let id = event.transaction.hash.toHex() + "-" + event.logIndex.toString()
-  let entity = new Fee(id)
-  entity.amount = event.params.amount
-  entity.blockNumber = event.block.number
-  entity.timestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-  entity.save()
+// FeeCollected
+export function handleFeeCollected(event: FeeCollected): void {
+  let feeId = event.transaction.hash
+    .toHex()
+    .concat("-")
+    .concat(event.logIndex.toString())
+
+  log.info("[FeeCollected] id={} amount={}", [
+    feeId,
+    event.params.amount.toString()
+  ])
+
+  let fee = new Fee(feeId)
+  fee.amount = event.params.amount
+  fee.blockNumber = event.block.number
+  fee.timestamp = event.block.timestamp
+  fee.transactionHash = event.transaction.hash
+  fee.save()
+
+  log.info("[FeeCollected] Saved Fee entity {}", [feeId])
 }

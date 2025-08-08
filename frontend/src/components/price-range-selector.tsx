@@ -3,6 +3,8 @@
 import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 
+import { useQuery, gql } from '@apollo/client';
+
 interface PriceRangeSelectorProps {
   minPrice: number;
   maxPrice: number;

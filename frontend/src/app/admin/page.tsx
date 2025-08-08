@@ -6,7 +6,7 @@ import { ClerkProvider, SignInButton, SignOutButton, useUser } from '@clerk/next
 
 import type { Bet } from '@/lib/types';
 
-import { formatDateUTC } from '@/lib/utils';
+import { formatDateUTC, formatTinybarsToHbar } from '@/lib/utils';
 import { fetchHbarPriceAtTimestamp, type CoinGeckoResponse } from '@/lib/coingecko';
 
 import { Header } from '@/components/header';
@@ -17,9 +17,6 @@ const GET_BETS = gql`
   query {
     bets(first: 100, orderBy: timestamp, orderDirection: desc) {
       id
-      user {
-        id
-      }
       stake
       priceMin
       priceMax
@@ -37,14 +34,14 @@ export default function AdminPageWrapper() {
 }
 
 function AdminPage() {
-  const { data } = useQuery(GET_BETS);
+  const { data, loading } = useQuery(GET_BETS);
   const { user, isLoaded, isSignedIn } = useUser();
   const isAdmin = user?.publicMetadata?.role === 'admin';
 
   const [resolutionPrices, setResolutionPrices] = useState<[number, number][]>([]);
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn || !isAdmin) return;
+    if (!isLoaded || !isSignedIn || !isAdmin || loading) return;
 
     const fetchPrices = async () => {
       try {
@@ -60,7 +57,7 @@ function AdminPage() {
     };
 
     fetchPrices();
-  }, [isLoaded, isSignedIn, isAdmin]);
+  }, [isLoaded, loading, isSignedIn, isAdmin]);
 
   const findClosestPrice = (targetTimestampSec: number): number | null => {
     if (!resolutionPrices.length) return null;
@@ -162,12 +159,12 @@ function AdminPage() {
 
                     return (
                       <tr key={key} className="border-b border-white/5 hover:bg-dark-slate/50">
-                        <td className="py-3 px-4">{bet.priceMin.toFixed(3)}</td>
+                        <td className="py-3 px-4">{formatTinybarsToHbar(bet.priceMin)}</td>
                         <td className="py-3 px-4 text-sm text-light-gray">
-                          {bet.priceMax.toFixed(3)}
+                          {formatTinybarsToHbar(bet.priceMin)}
                         </td>
                         <td className="py-3 px-4 text-sm text-light-gray">
-                          {formatDateUTC(bet.targetTimestamp)}
+                          {formatDateUTC(bet.timestamp)}
                         </td>
                         <td className="py-3 px-4 text-sm text-medium-gray">
                           {isInRange ? (

@@ -3,11 +3,20 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ExternalLink, Wallet, Settings, ChevronDown, TrendingUp, TrendingDown, Copy, Check, User } from 'lucide-react';
-import { useWallet } from '@buidlerlabs/hashgraph-react-wallets';
-import { HashpackConnector } from '@buidlerlabs/hashgraph-react-wallets/connectors';
+import {
+  ExternalLink,
+  Wallet,
+  Settings,
+  ChevronDown,
+  TrendingUp,
+  TrendingDown,
+  Copy,
+  Check,
+  User,
+  Coins,
+  Info,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ThemeToggle } from '@/components/theme-toggle';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,33 +26,45 @@ import {
 import { Tooltip } from '@/components/ui/tooltip';
 
 import { formatAddress } from '@/lib/utils';
-import { useHbarPrice } from '@/hooks/useHbarPrice';
-import { HbarPriceDisplay } from '@/components/hbar-price-display';
 import { WalletSelector } from '@/components/wallet-selector';
+import { AccountDetailsModal } from '@/components/account-details-modal';
 import { useMultiWallet } from '@/hooks/useMultiWallet';
 
 export function Header() {
-  const { currentWalletState } = useMultiWallet();
+  const { currentWalletState, currentAccountId, currentAccountInfo, balance, balanceLoading } = useMultiWallet();
   const [copied, setCopied] = React.useState(false);
 
   const handleCopyAddress = async () => {
-    // Try to get the address from various possible properties
-    const address = (currentWalletState as any)?.accountId || 
-                   (currentWalletState as any)?.address || 
-                   (currentWalletState as any)?.account?.id ||
-                   (currentWalletState as any)?.account?.address;
-    if (address) {
-      await navigator.clipboard.writeText(address);
+    if (currentAccountId) {
+      await navigator.clipboard.writeText(currentAccountId);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
   };
 
-  // Try to get the wallet address from various possible properties
-  const walletAddress = (currentWalletState as any)?.accountId || 
-                       (currentWalletState as any)?.address || 
-                       (currentWalletState as any)?.account?.id ||
-                       (currentWalletState as any)?.account?.address || '';
+  // Get display address - prefer accountId for Hedera native wallets, address for others
+  const getDisplayAddress = () => {
+    if (!currentAccountInfo) return '';
+    
+    // For Hedera native wallets (hashpack, blade), show accountId
+    if (currentAccountInfo.walletType === 'hashpack' || currentAccountInfo.walletType === 'blade') {
+      return currentAccountInfo.accountId || currentAccountInfo.address;
+    }
+    
+    // For non-Hedera wallets (metamask, walletconnect, kabila), show address
+    return currentAccountInfo.address || currentAccountInfo.accountId;
+  };
+
+  const displayAddress = getDisplayAddress();
+
+  const formatBalance = (balance: string | null) => {
+    if (!balance) return '0 HBAR';
+    const numBalance = parseFloat(balance);
+    if (numBalance >= 1000) {
+      return `${(numBalance / 1000).toFixed(2)}k HBAR`;
+    }
+    return `${numBalance.toFixed(2)} HBAR`;
+  };
 
   return (
     <header className="border-b border-border bg-neutral-950 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -71,32 +92,52 @@ export function Header() {
             </Button>
           </Link>
 
-          <Button variant="ghost" size="sm">
-            <div className="flex flex-col items-start">
-              <span>Hedera</span>
-              <HbarPriceDisplay size="sm" showIcon={false} />
-            </div>
-          </Button>
+          {/* <Link href="/hashpack-test">
+            <Button variant="ghost" size="sm">
+              <User className="w-4 h-4 mr-2" />
+              Wallet Test
+            </Button>
+          </Link> */}
 
           {currentWalletState.isConnected ? (
             <>
+              {/* Balance Display */}
               <div className="flex items-center space-x-2">
-                <span className="text-sm font-medium text-light-gray">
-                  HBAR Balance
-                </span>
+                {/* <span className="text-sm font-medium text-light-gray">Balance</span> */}
                 <Button
                   variant="outline"
                   size="sm"
                   className="border-vibrant-purple text-vibrant-purple hover:bg-vibrant-purple hover:text-white"
                 >
-                  Get
-                  <ExternalLink className="w-4 h-4 ml-1" />
+                  {balanceLoading ? (
+                    <div className="flex items-center space-x-1">
+                      <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                      <span>Loading...</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-1">
+                      <Coins className="w-3 h-3" />
+                      <span>{formatBalance(balance)}</span>
+                    </div>
+                  )}
                 </Button>
               </div>
 
+              {/* Account Details Modal */}
+              <AccountDetailsModal>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center space-x-2 bg-neutral-800 border-neutral-700 text-light-gray hover:bg-neutral-700"
+                >
+                  <Info className="w-3 h-3" />
+                  <span className="text-xs">Details</span>
+                </Button>
+              </AccountDetailsModal>
+
               {/* Wallet Address Button */}
-              {walletAddress && (
-                <Tooltip content={`${walletAddress} (Click to copy)`}>
+              {displayAddress && (
+                <Tooltip content={`${displayAddress} (Click to copy)`}>
                   <Button
                     variant="outline"
                     size="sm"
@@ -104,12 +145,8 @@ export function Header() {
                     onClick={handleCopyAddress}
                   >
                     <User className="w-3 h-3" />
-                    <span className="text-xs font-mono">
-                      {formatAddress(walletAddress, 4)}
-                    </span>
-                    {copied && (
-                      <Check className="w-3 h-3 text-green-400" />
-                    )}
+                    <span className="text-xs font-mono">{formatAddress(displayAddress, 4)}</span>
+                    {copied && <Check className="w-3 h-3 text-green-400" />}
                   </Button>
                 </Tooltip>
               )}
@@ -125,19 +162,15 @@ export function Header() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => currentWalletState.disconnect()}>Disconnect</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => currentWalletState.disconnect()}>
+                    Disconnect
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </>
           ) : (
             <WalletSelector />
           )}
-
-          <ThemeToggle />
-
-          <Button variant="ghost" size="icon">
-            <Settings className="w-4 h-4" />
-          </Button>
         </div>
       </div>
     </header>
