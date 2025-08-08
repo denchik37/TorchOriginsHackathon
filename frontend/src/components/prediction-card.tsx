@@ -17,6 +17,11 @@ import { useHbarPrice } from '@/hooks/useHbarPrice';
 import { useTorchPredictionMarket } from '@/hooks/useTorchPredictionMarket';
 import { HbarPriceDisplay } from '@/components/hbar-price-display';
 import { Bet } from '@/lib/types';
+import { ContractId, TransactionReceipt } from '@hashgraph/sdk';
+import { ethers } from 'ethers';
+
+import { useWriteContract } from '@buidlerlabs/hashgraph-react-wallets';
+import TorchPredictionMarketABI from '../../abi/TorchPredictionMarket.json';
 
 interface PredictionCardProps {
   className?: string;
@@ -49,6 +54,8 @@ function getTimestampRange(date: Date, timeStr: string) {
 }
 
 export function PredictionCard({ className }: PredictionCardProps) {
+  const { writeContract } = useWriteContract();
+
   const [activeTab, setActiveTab] = useState('bet');
   const [selectedRange, setSelectedRange] = useState({
     min: 0.0,
@@ -59,19 +66,19 @@ export function PredictionCard({ className }: PredictionCardProps) {
   const [resolutionTime, setResolutionTime] = useState('13:00');
   const [isPlacingBet, setIsPlacingBet] = useState(false);
   const [isBetPlaced, setIsBetPlaced] = useState(false);
-  const [betId, setBetId] = useState<string | null>(null);
+  const [betId, setBetId] = useState<TransactionReceipt | null | string>(null);
   const [betError, setBetError] = useState<string | null>(null);
 
   const { startUnix, endUnix } = getTimestampRange(resolutionDate, resolutionTime);
 
   const { price: currentPrice, isLoading: priceLoading, error: priceError } = useHbarPrice();
-  
+
   // Use the contract hook
   const {
     loading: contractLoading,
-    error: contractError,
+
     isConnected,
-    clearError
+    clearError,
   } = useTorchPredictionMarket();
 
   const { data, loading, error } = useQuery(GET_BETS_BY_TIMESTAMP, {
@@ -107,13 +114,49 @@ export function PredictionCard({ className }: PredictionCardProps) {
     clearError();
 
     try {
-      // Simulate processing time
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Generate a mock bet ID
-      const mockBetId = Math.floor(Math.random() * 1000000).toString();
-      setBetId(mockBetId);
-      setIsBetPlaced(true);
+      // Convert price range to wei (assuming prices are in USD, we need to convert to contract format)
+      const priceMin = ethers.utils.parseUnits(selectedRange.min.toString(), 8); // 8 decimals for price
+      const priceMax = ethers.utils.parseUnits(selectedRange.max.toString(), 8);
+
+      // Convert timestamp to string
+      const targetTimestamp = startUnix.toString();
+
+      // // Simulate the bet first to check if it's valid
+      // const simulation = await simulatePlaceBet(
+      //   targetTimestamp,
+      //   priceMin.toString(),
+      //   priceMax.toString(),
+      //   depositAmount
+      // );
+
+      // if (!simulation || !simulation.isValid) {
+      //   throw new Error(simulation?.errorMessage || 'Bet simulation failed');
+      // }
+
+      const betId = await writeContract({
+        contractId: ContractId.fromString('0.0.9570085'),
+        abi: TorchPredictionMarketABI.abi,
+        functionName: 'placeBet',
+        args: [targetTimestamp, priceMin, priceMax],
+        metaArgs: {
+          amount: Number(depositAmount),
+        },
+      });
+
+      // Place the actual bet
+      // const betId = await placeBet(
+      //   targetTimestamp,
+      //   priceMin.toString(),
+      //   priceMax.toString(),
+      //   depositAmount
+      // );
+
+      if (betId) {
+        setBetId(betId);
+        setIsBetPlaced(true);
+      } else {
+        throw new Error('Failed to place bet - no bet ID returned');
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to place bet';
       setBetError(errorMessage);
@@ -213,18 +256,10 @@ export function PredictionCard({ className }: PredictionCardProps) {
   const { sharpness, leadTime, betQuality } = calculateMultipliers();
 
   // Validation
-  const hasValidAmount = depositAmount && parseFloat(depositAmount) > 0 && parseFloat(depositAmount) <= balance;
+  const hasValidAmount =
+    depositAmount && parseFloat(depositAmount) > 0 && parseFloat(depositAmount) <= balance;
   const isWalletConnected = isConnected;
   const canPlaceBet = hasValidAmount && isWalletConnected && !contractLoading;
-
-
-
-  // Show contract errors
-  useEffect(() => {
-    if (contractError) {
-      setBetError(contractError);
-    }
-  }, [contractError]);
 
   useEffect(() => {
     console.log(data);
@@ -411,7 +446,10 @@ export function PredictionCard({ className }: PredictionCardProps) {
               <div className="flex justify-between py-3 px-4 border border-white/5 rounded-lg text-sm">
                 <span className="text-medium-gray">Protocol fee:</span>
                 <span className="text-white">
-                  0.5% <span className="text-medium-gray">({(parseFloat(depositAmount) * 0.005).toFixed(4)} HBAR)</span>
+                  0.5%{' '}
+                  <span className="text-medium-gray">
+                    ({(parseFloat(depositAmount) * 0.005).toFixed(4)} HBAR)
+                  </span>
                 </span>
               </div>
             </div>
@@ -434,14 +472,10 @@ export function PredictionCard({ className }: PredictionCardProps) {
               <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3">
                 <div className="flex items-start space-x-2">
                   <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-red-100">
-                    {betError}
-                  </p>
+                  <p className="text-sm text-red-100">{betError}</p>
                 </div>
               </div>
             )}
-
-
 
             {/* Submit Button */}
             <Button
@@ -450,14 +484,13 @@ export function PredictionCard({ className }: PredictionCardProps) {
               onClick={handlePlaceBet}
               disabled={!canPlaceBet}
             >
-              {contractLoading 
-                ? 'Processing...' 
-                : !isWalletConnected 
-                  ? 'Connect Wallet' 
-                  : !hasValidAmount 
-                    ? 'Enter Amount' 
-                    : 'Place Bet'
-              }
+              {contractLoading
+                ? 'Processing...'
+                : !isWalletConnected
+                  ? 'Connect Wallet'
+                  : !hasValidAmount
+                    ? 'Enter Amount'
+                    : 'Place Bet'}
             </Button>
           </TabsContent>
 
