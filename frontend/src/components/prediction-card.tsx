@@ -20,7 +20,8 @@ import { Bet } from '@/lib/types';
 import { ContractId, TransactionReceipt } from '@hashgraph/sdk';
 import { ethers } from 'ethers';
 
-import { useWriteContract } from '@buidlerlabs/hashgraph-react-wallets';
+import { useWallet, useBalance, useWriteContract } from '@buidlerlabs/hashgraph-react-wallets';
+
 import TorchPredictionMarketABI from '../../abi/TorchPredictionMarket.json';
 
 interface PredictionCardProps {
@@ -55,6 +56,9 @@ function getTimestampRange(date: Date, timeStr: string) {
 
 export function PredictionCard({ className }: PredictionCardProps) {
   const { writeContract } = useWriteContract();
+  const { isConnected } = useWallet();
+  const { data: balanceData } = useBalance({ autoFetch: isConnected });
+  const balance = balanceData?.value?.toFixed(2) ?? 0;
 
   const [activeTab, setActiveTab] = useState('bet');
   const [selectedRange, setSelectedRange] = useState({
@@ -77,7 +81,6 @@ export function PredictionCard({ className }: PredictionCardProps) {
   const {
     loading: contractLoading,
 
-    isConnected,
     clearError,
   } = useTorchPredictionMarket();
 
@@ -88,7 +91,6 @@ export function PredictionCard({ className }: PredictionCardProps) {
 
   const totalBets = 1300;
   const activeBets = 375;
-  const balance = 540;
 
   const handleRangeChange = (min: number, max: number) => {
     setSelectedRange({ min, max });
