@@ -1,5 +1,6 @@
 specVersion: 0.0.4
 description: Torch prediction market subgraph
+repository: https://github.com/hashgraph/hedera-subgraph-example
 schema:
   file: ./schema.graphql
 dataSources:
@@ -15,6 +16,7 @@ dataSources:
       apiVersion: 0.0.6
       language: wasm/assemblyscript
       entities:
+        - User
         - Bet
         - Fee
       abis:
