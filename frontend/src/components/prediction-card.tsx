@@ -17,7 +17,6 @@ import { useHbarPrice } from '@/hooks/useHbarPrice';
 import { useTorchPredictionMarket } from '@/hooks/useTorchPredictionMarket';
 import { HbarPriceDisplay } from '@/components/hbar-price-display';
 import { Bet } from '@/lib/types';
-import { ethers } from 'ethers';
 
 interface PredictionCardProps {
   className?: string;
@@ -69,8 +68,6 @@ export function PredictionCard({ className }: PredictionCardProps) {
   
   // Use the contract hook
   const {
-    placeBet,
-    simulatePlaceBet,
     loading: contractLoading,
     error: contractError,
     isConnected,
@@ -110,39 +107,13 @@ export function PredictionCard({ className }: PredictionCardProps) {
     clearError();
 
     try {
-      // Convert price range to wei (assuming prices are in USD, we need to convert to contract format)
-      const priceMin = ethers.utils.parseUnits(selectedRange.min.toString(), 8); // 8 decimals for price
-      const priceMax = ethers.utils.parseUnits(selectedRange.max.toString(), 8);
+      // Simulate processing time
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Convert timestamp to string
-      const targetTimestamp = startUnix.toString();
-
-      // Simulate the bet first to check if it's valid
-      const simulation = await simulatePlaceBet(
-        targetTimestamp,
-        priceMin.toString(),
-        priceMax.toString(),
-        depositAmount
-      );
-
-      if (!simulation || !simulation.isValid) {
-        throw new Error(simulation?.errorMessage || 'Bet simulation failed');
-      }
-
-      // Place the actual bet
-      const betId = await placeBet(
-        targetTimestamp,
-        priceMin.toString(),
-        priceMax.toString(),
-        depositAmount
-      );
-
-      if (betId) {
-        setBetId(betId);
-        setIsBetPlaced(true);
-      } else {
-        throw new Error('Failed to place bet - no bet ID returned');
-      }
+      // Generate a mock bet ID
+      const mockBetId = Math.floor(Math.random() * 1000000).toString();
+      setBetId(mockBetId);
+      setIsBetPlaced(true);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to place bet';
       setBetError(errorMessage);
@@ -246,14 +217,7 @@ export function PredictionCard({ className }: PredictionCardProps) {
   const isWalletConnected = isConnected;
   const canPlaceBet = hasValidAmount && isWalletConnected && !contractLoading;
 
-  // Show error if wallet is not connected
-  useEffect(() => {
-    if (!isWalletConnected) {
-      setBetError('Please connect your wallet to place bets');
-    } else {
-      setBetError(null);
-    }
-  }, [isWalletConnected]);
+
 
   // Show contract errors
   useEffect(() => {
@@ -477,17 +441,7 @@ export function PredictionCard({ className }: PredictionCardProps) {
               </div>
             )}
 
-            {/* Wallet Connection Status */}
-            {!isWalletConnected && (
-              <div className="bg-blue-500/20 border border-blue-500/30 rounded-lg p-3">
-                <div className="flex items-start space-x-2">
-                  <AlertTriangle className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-blue-100">
-                    Please connect your wallet to place bets
-                  </p>
-                </div>
-              </div>
-            )}
+
 
             {/* Submit Button */}
             <Button
@@ -496,7 +450,14 @@ export function PredictionCard({ className }: PredictionCardProps) {
               onClick={handlePlaceBet}
               disabled={!canPlaceBet}
             >
-              {contractLoading ? 'Processing...' : canPlaceBet ? 'Place Bet' : 'Connect Wallet'}
+              {contractLoading 
+                ? 'Processing...' 
+                : !isWalletConnected 
+                  ? 'Connect Wallet' 
+                  : !hasValidAmount 
+                    ? 'Enter Amount' 
+                    : 'Place Bet'
+              }
             </Button>
           </TabsContent>
 

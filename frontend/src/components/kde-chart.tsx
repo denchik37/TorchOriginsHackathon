@@ -205,11 +205,11 @@ export function KDEChart({ className, currentPrice, enableZoom = false }: KDECha
     // Use the density calculation logic from chart.js
     const densityData = d3
       .contourDensity()
-      .x((d) => x(d.time))
-      .y((d) => y(d.price))
+      .x((d: any) => x(d.time))
+      .y((d: any) => y(d.price))
       .size([width, height])
       .bandwidth(35)
-      .weight((d) => d.stake)(dataset);
+      .weight((d: any) => d.stake)(dataset as any);
 
     // Use smoky blue interpolator from chart.js
     const maxDensityValue = d3.max(densityData, (d) => d.value);

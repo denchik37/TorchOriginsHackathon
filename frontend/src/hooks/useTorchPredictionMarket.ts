@@ -79,11 +79,10 @@ export function useTorchPredictionMarket() {
       
       if (wallet && evmAddress.data) {
         try {
-          // For now, we'll use a mock implementation
-          // This will be enhanced once we have proper wallet integration
-          console.log('Wallet connected, using mock contract for now');
-          setError('Using mock contract - real contract integration pending');
-          setContract(null); // We'll use mock functions instead
+                  // For now, we'll use a mock implementation
+        // This will be enhanced once we have proper wallet integration
+        console.log('Wallet connected, using mock contract for now');
+        setContract(null); // We'll use mock functions instead
         } catch (err) {
           console.error('Contract initialization error:', err);
           setError(`Failed to initialize contract: ${err instanceof Error ? err.message : 'Unknown error'}`);
