@@ -1,8 +1,6 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-const TINYBARS_PER_HBAR = 100_000_000;
-
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -40,7 +38,7 @@ export function formatDateUTC(date: number): string {
 }
 
 export function formatTinybarsToHbar(tinybars: number | string, fractionDigits = 6) {
-  const hbar = Number(tinybars) / TINYBARS_PER_HBAR;
+  const hbar = Number(tinybars) / 10000;
   return hbar.toFixed(fractionDigits);
 }
 
