@@ -55,6 +55,10 @@ function getTimestampRange(date: Date, timeStr: string) {
   };
 }
 
+function limitDecimals(value: number, decimals: number) {
+  return value.toFixed(decimals);
+}
+
 export function PredictionCard({ className }: PredictionCardProps) {
   const { writeContract } = useWriteContract();
   const { isConnected } = useWallet();
@@ -68,7 +72,7 @@ export function PredictionCard({ className }: PredictionCardProps) {
   });
   const [depositAmount, setDepositAmount] = useState('0');
   const [resolutionDate, setResolutionDate] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000)); // Tomorrow
-  const [resolutionTime, setResolutionTime] = useState('13:00');
+  const [resolutionTime, setResolutionTime] = useState('15:00');
   const [isPlacingBet, setIsPlacingBet] = useState(false);
   const [isBetPlaced, setIsBetPlaced] = useState(false);
   const [betId, setBetId] = useState<TransactionReceipt | null | string>(null);
@@ -117,27 +121,20 @@ export function PredictionCard({ className }: PredictionCardProps) {
     clearError();
 
     try {
-      // Convert price range to wei (assuming prices are in USD, we need to convert to contract format)
-      const priceMin = ethers.utils.parseUnits(selectedRange.min.toString(), 8); // 8 decimals for price
-      const priceMax = ethers.utils.parseUnits(selectedRange.max.toString(), 8);
+      const decimals = 8;
+
+      const minStr = limitDecimals(selectedRange.min, decimals);
+      const maxStr = limitDecimals(selectedRange.max, decimals);
+
+      // Now parseFixed works fine:
+      const priceMin = ethers.utils.parseUnits(minStr, decimals);
+      const priceMax = ethers.utils.parseUnits(maxStr, decimals);
 
       // Convert timestamp to string
       const targetTimestamp = startUnix.toString();
 
-      // // Simulate the bet first to check if it's valid
-      // const simulation = await simulatePlaceBet(
-      //   targetTimestamp,
-      //   priceMin.toString(),
-      //   priceMax.toString(),
-      //   depositAmount
-      // );
-
-      // if (!simulation || !simulation.isValid) {
-      //   throw new Error(simulation?.errorMessage || 'Bet simulation failed');
-      // }
-
-      const tinybarsPerHbar = 100_000_000;
-      const amountInTinybars = Number(depositAmount) * tinybarsPerHbar;
+      console.log(priceMin);
+      console.log(priceMax);
 
       const betId = await writeContract({
         contractId: ContractId.fromString('0.0.9570085'),
@@ -149,14 +146,6 @@ export function PredictionCard({ className }: PredictionCardProps) {
           amount: Number(depositAmount),
         },
       });
-
-      // Place the actual bet
-      // const betId = await placeBet(
-      //   targetTimestamp,
-      //   priceMin.toString(),
-      //   priceMax.toString(),
-      //   depositAmount
-      // );
 
       if (betId) {
         setBetId(betId);
