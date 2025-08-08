@@ -8,9 +8,9 @@ dataSources:
     name: TorchPredictionMarket
     network: mainnet
     source:
-      address: "0xb1be22ead5086cb8409bb81d0f63aae36a977798"
+      address: "0x106d7759f06eb02e339838461531c6f8f3f7aef3"
       abi: TorchPredictionMarket
-      startBlock: 82966141
+      startBlock: 82977547
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
