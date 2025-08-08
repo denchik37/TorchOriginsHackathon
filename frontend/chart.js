@@ -1,9 +1,44 @@
-'use client'; // This directive is necessary for using hooks like useEffect and useRef in Next.js App Router
+'use client';
 
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 
-// The data is now passed as a prop to the component for better reusability.
+// Enhanced KDE calculation with adaptive bandwidth
+function calculateAdaptiveBandwidth(data, xScale, yScale) {
+  const n = data.length;
+  if (n < 2) return 35;
+  
+  const localDensities = data.map((d, i) => {
+    const distances = data.map((other, j) => {
+      if (i === j) return Infinity;
+      const dx = xScale(d.time) - xScale(other.time);
+      const dy = yScale(d.price) - yScale(other.price);
+      return Math.sqrt(dx * dx + dy * dy);
+    });
+    return Math.min(...distances);
+  });
+  
+  const medianDistance = d3.median(localDensities) || 35;
+  const adaptiveBandwidth = Math.max(20, Math.min(60, medianDistance * 0.8));
+  
+  return adaptiveBandwidth;
+}
+
+// Improved weight scaling function
+function calculateWeightScale(weights) {
+  const minWeight = Math.min(...weights);
+  const maxWeight = Math.max(...weights);
+  
+  const logWeights = weights.map(w => Math.log(w + 1));
+  const logMin = Math.log(minWeight + 1);
+  const logMax = Math.log(maxWeight + 1);
+  
+  return weights.map(w => {
+    const logW = Math.log(w + 1);
+    return Math.pow((logW - logMin) / (logMax - logMin), 0.7);
+  });
+}
+
 const defaultData = [
     { "targetTimestamp": "1754835153", "weight": "223875", "priceMin": "2547", "priceMax": "2603", "payout": "0" },
     { "targetTimestamp": "1754833380", "weight": "74625", "priceMin": "1636", "priceMax": "1868", "payout": "0" },
@@ -39,22 +74,34 @@ const KdePriceChart = ({ data = defaultData }) => {
 
         const processData = (rawData) => {
             const now = new Date();
-            return rawData.map(d => {
+            const processed = rawData.map(d => {
                 const originalWeight = parseInt(d.weight);
                 return {
                     time: new Date(parseInt(d.targetTimestamp) * 1000),
                     price: (parseInt(d.priceMin) + parseInt(d.priceMax)) / 2 / 10000,
-                    stake: Math.sqrt(originalWeight), // Use square root to scale weights for better visualization
-                    originalWeight: originalWeight // Keep original weight for tooltips
+                    stake: originalWeight,
+                    originalWeight: originalWeight,
+                    priceRange: (parseInt(d.priceMax) - parseInt(d.priceMin)) / 10000
                 };
             }).filter(d => d.time > now);
+
+            // Remove outliers using IQR method
+            const prices = processed.map(d => d.price);
+            const sortedPrices = prices.sort((a, b) => a - b);
+            const q1 = sortedPrices[Math.floor(sortedPrices.length * 0.25)];
+            const q3 = sortedPrices[Math.floor(sortedPrices.length * 0.75)];
+            const iqr = q3 - q1;
+            const lowerBound = q1 - 1.5 * iqr;
+            const upperBound = q3 + 1.5 * iqr;
+
+            return processed.filter(d => d.price >= lowerBound && d.price <= upperBound);
         };
 
         const dataset = processData(data);
         if (dataset.length === 0) return;
 
         const container = chartContainerRef.current;
-        const margin = { top: 20, right: 40, bottom: 60, left: 60 };
+        const margin = { top: 25, right: 50, bottom: 70, left: 70 };
         const width = container.clientWidth - margin.left - margin.right;
         const height = container.clientHeight - margin.top - margin.bottom;
 
@@ -79,7 +126,7 @@ const KdePriceChart = ({ data = defaultData }) => {
         const filterId = `glow-${Math.random().toString(36).substr(2, 9)}`;
         const filter = defs.append("filter").attr("id", filterId);
         filter.append("feGaussianBlur")
-            .attr("stdDeviation", "4.5")
+            .attr("stdDeviation", "3")
             .attr("result", "coloredBlur");
         const feMerge = filter.append("feMerge");
         feMerge.append("feMergeNode").attr("in", "coloredBlur");
@@ -89,10 +136,10 @@ const KdePriceChart = ({ data = defaultData }) => {
             .attr("clip-path", `url(#${clipId})`);
 
         const [minTime, maxTime] = d3.extent(dataset, d => d.time);
-        const timePadding = (maxTime.getTime() - minTime.getTime()) * 0.2; 
+        const timePadding = (maxTime.getTime() - minTime.getTime()) * 0.15;
 
         const [minPrice, maxPrice] = d3.extent(dataset, d => d.price);
-        const pricePadding = (maxPrice - minPrice) * 0.2;
+        const pricePadding = (maxPrice - minPrice) * 0.15;
 
         const x = d3.scaleTime()
             .domain([new Date(minTime.getTime() - timePadding), new Date(maxTime.getTime() + timePadding)])
@@ -101,11 +148,14 @@ const KdePriceChart = ({ data = defaultData }) => {
         const y = d3.scaleLinear()
             .domain([minPrice - pricePadding, maxPrice + pricePadding])
             .range([height, 0]);
-            
-        const opacityScale = d3.scaleLinear().domain(d3.extent(dataset, d => d.stake)).range([0.4, 1.0]);
 
-        svg.append("g").attr("class", "grid-x").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x).tickSize(-height).tickFormat("")).selectAll("line").attr("stroke", "currentColor").attr("stroke-opacity", 0.1);
-        svg.append("g").call(d3.axisLeft(y).tickSize(-width).tickFormat("")).selectAll("line").attr("stroke", "currentColor").attr("stroke-opacity", 0.1);
+        // Enhanced weight scaling
+        const weightScale = calculateWeightScale(dataset.map(d => d.stake));
+        const opacityScale = d3.scaleLinear().domain([0, 1]).range([0.3, 1.0]);
+
+        // Enhanced grid
+        svg.append("g").attr("class", "grid-x").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x).tickSize(-height).tickFormat("")).selectAll("line").attr("stroke", "currentColor").attr("stroke-opacity", 0.15).attr("stroke-width", 0.5);
+        svg.append("g").call(d3.axisLeft(y).tickSize(-width).tickFormat("")).selectAll("line").attr("stroke", "currentColor").attr("stroke-opacity", 0.15).attr("stroke-width", 0.5);
         
         svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x).ticks(width / 100).tickFormat(d3.timeFormat("%b %d"))).attr("class", "text-slate-500");
         svg.append("g").call(d3.axisLeft(y).ticks(height / 40).tickFormat(d3.format("$.3f"))).attr("class", "text-slate-500");
@@ -115,11 +165,29 @@ const KdePriceChart = ({ data = defaultData }) => {
         svg.append("text").attr("text-anchor", "middle").attr("x", width / 2).attr("y", height + margin.bottom - 15).text("Target Date").attr("class", "text-sm font-medium text-slate-600");
         svg.append("text").attr("text-anchor", "middle").attr("transform", "rotate(-90)").attr("x", -height / 2).attr("y", -margin.left + 20).text("Price (USD)").attr("class", "text-sm font-medium text-slate-600");
 
-        const densityData = d3.contourDensity().x(d => x(d.time)).y(d => y(d.price)).size([width, height]).bandwidth(35).weight(d => d.stake)(dataset);
+        // Enhanced KDE calculation with adaptive bandwidth
+        const adaptiveBandwidth = calculateAdaptiveBandwidth(dataset, x, y);
+        const densityData = d3.contourDensity()
+            .x(d => x(d.time))
+            .y(d => y(d.price))
+            .size([width, height])
+            .bandwidth(adaptiveBandwidth)
+            .weight((d) => {
+                const index = dataset.indexOf(d);
+                return weightScale[index] || 0;
+            })(dataset);
         
-        const smokyBlueInterpolator = d3.interpolateRgb("rgba(71, 144, 202, 0.1)", "#4790ca");
-        const densityColor = d3.scaleSequential(smokyBlueInterpolator)
-            .domain([0, d3.max(densityData, d => d.value)]);
+        // Enhanced color scheme with multiple levels
+        const maxDensityValue = d3.max(densityData, d => d.value);
+        
+        const lowDensityColor = d3.scaleSequential(d3.interpolateRgb("rgba(59, 130, 246, 0.1)", "rgba(59, 130, 246, 0.3)"))
+            .domain([0, maxDensityValue * 0.3]);
+        
+        const mediumDensityColor = d3.scaleSequential(d3.interpolateRgb("rgba(59, 130, 246, 0.3)", "rgba(59, 130, 246, 0.6)"))
+            .domain([maxDensityValue * 0.3, maxDensityValue * 0.7]);
+        
+        const highDensityColor = d3.scaleSequential(d3.interpolateRgb("rgba(59, 130, 246, 0.6)", "rgba(59, 130, 246, 0.9)"))
+            .domain([maxDensityValue * 0.7, maxDensityValue]);
 
         chartArea.append("g")
             .attr("filter", `url(#${filterId})`)
@@ -127,37 +195,73 @@ const KdePriceChart = ({ data = defaultData }) => {
             .data(densityData)
             .enter().append("path")
             .attr("d", d3.geoPath())
-            .attr("fill", d => densityColor(d.value))
-            .attr("fill-opacity", 0.9);
+            .attr("fill", d => {
+                if (d.value <= maxDensityValue * 0.3) return lowDensityColor(d.value);
+                if (d.value <= maxDensityValue * 0.7) return mediumDensityColor(d.value);
+                return highDensityColor(d.value);
+            })
+            .attr("fill-opacity", 0.95);
 
-        const maxDensity = d3.max(densityData, d => d.value);
-        const confidenceThreshold = maxDensity * 0.25;
-        const confidenceContours = densityData.filter(d => d.value > confidenceThreshold);
-        chartArea.append("g").selectAll("path.confidence").data(confidenceContours).enter().append("path").attr("d", d3.geoPath()).attr("fill", "rgb(16 185 129 / 0.4)").attr("stroke", "rgb(5 150 105)").attr("stroke-linejoin", "round").attr("stroke-width", 1);
+        // Enhanced confidence contours with multiple levels
+        const confidenceLevels = [0.25, 0.5, 0.75];
+        const contourColors = ['rgba(16, 185, 129, 0.3)', 'rgba(16, 185, 129, 0.5)', 'rgba(16, 185, 129, 0.7)'];
+        const contourStrokes = ['rgb(5, 150, 105)', 'rgb(4, 120, 87)', 'rgb(6, 95, 70)'];
 
-        const tooltip = d3.select(container).append("div").attr("class", "absolute z-10 p-2 text-xs text-white bg-slate-800 rounded-md shadow-lg pointer-events-none transition-opacity duration-200").style("opacity", 0);
-        const timeFormat = d3.timeFormat("%b %d, %Y");
+        confidenceLevels.forEach((level, i) => {
+            const threshold = maxDensityValue * level;
+            const contours = densityData.filter(d => d.value > threshold);
+            
+            chartArea.append("g").selectAll(`path.confidence-${i}`).data(contours).enter().append("path")
+                .attr("d", d3.geoPath())
+                .attr("fill", contourColors[i])
+                .attr("stroke", contourStrokes[i])
+                .attr("stroke-linejoin", "round")
+                .attr("stroke-width", 1.5)
+                .attr("stroke-opacity", 0.8);
+        });
 
-        chartArea.append("g").selectAll("line").data(dataset).enter().append("line")
-            .attr("x1", d => x(d.time))
-            .attr("y1", d => y(d.price - 0.0004))
-            .attr("x2", d => x(d.time))
-            .attr("y2", d => y(d.price + 0.0004))
-            .attr("stroke", "#f43f5e")
-            .attr("stroke-width", 2.5)
-            .attr("stroke-opacity", d => opacityScale(d.stake))
-            .attr("stroke-linecap", "round")
+        const tooltip = d3.select(container).append("div").attr("class", "absolute z-10 p-3 text-sm text-white bg-slate-800/95 backdrop-blur-sm rounded-lg border border-slate-700 shadow-xl pointer-events-none transition-opacity duration-200").style("opacity", 0);
+        const timeFormat = d3.timeFormat("%b %d, %Y at %I:%M %p");
+
+        // Enhanced bet markers
+        chartArea.append("g").selectAll("circle").data(dataset).enter().append("circle")
+            .attr("cx", d => x(d.time))
+            .attr("cy", d => y(d.price))
+            .attr("r", d => {
+                const index = dataset.indexOf(d);
+                return Math.max(2, Math.min(6, weightScale[index] * 4));
+            })
+            .attr("fill", "#ef4444")
+            .attr("stroke", "#dc2626")
+            .attr("stroke-width", 1)
+            .attr("opacity", d => {
+                const index = dataset.indexOf(d);
+                return opacityScale(weightScale[index]);
+            })
             .on("mouseover", (event, d) => {
-                tooltip.style("opacity", 1).html(`Price: $${d.price.toFixed(4)}<br>Date: ${timeFormat(d.time)}<br>Weight: ${d.originalWeight.toFixed(0)}`).style("left", `${event.pageX + 15}px`).style("top", `${event.pageY - 15}px`);
+                const index = dataset.indexOf(d);
+                tooltip.style("opacity", 1).html(`
+                    <div class="font-semibold text-red-400 mb-2">Bet Details</div>
+                    <div class="grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 text-xs">
+                        <span class="font-medium text-slate-400">Price:</span> 
+                        <span class="text-right font-mono">$${d.price.toFixed(4)}</span>
+                        <span class="font-medium text-slate-400">Date:</span> 
+                        <span class="text-right">${timeFormat(d.time)}</span>
+                        <span class="font-medium text-slate-400">Weight:</span> 
+                        <span class="text-right font-mono">${d.originalWeight.toLocaleString()}</span>
+                        <span class="font-medium text-slate-400">Range:</span> 
+                        <span class="text-right font-mono">±$${d.priceRange.toFixed(4)}</span>
+                    </div>
+                `).style("left", `${event.pageX + 15}px`).style("top", `${event.pageY - 15}px`);
             })
             .on("mouseout", () => tooltip.style("opacity", 0));
 
         const focus = svg.append("g").attr("class", "focus").style("display", "none");
-        focus.append("line").attr("class", "crosshair").attr("y1", 0).attr("y2", height).attr("stroke", "#94a3b8").attr("stroke-width", 0.5).attr("stroke-dasharray", "3,3");
-        focus.append("line").attr("class", "crosshair").attr("x1", 0).attr("x2", width).attr("stroke", "#94a3b8").attr("stroke-width", 0.5).attr("stroke-dasharray", "3,3");
+        focus.append("line").attr("class", "crosshair").attr("y1", 0).attr("y2", height).attr("stroke", "#94a3b8").attr("stroke-width", 1).attr("stroke-dasharray", "4,4");
+        focus.append("line").attr("class", "crosshair").attr("x1", 0).attr("x2", width).attr("stroke", "#94a3b8").attr("stroke-width", 1).attr("stroke-dasharray", "4,4");
 
         const metricsPanel = d3.select(container).append("div")
-            .attr("class", "absolute top-4 right-4 p-3 bg-white/70 backdrop-blur-sm border border-slate-200 rounded-xl shadow-lg text-xs text-slate-700 pointer-events-none transition-opacity duration-300")
+            .attr("class", "absolute top-4 right-4 p-3 bg-white/90 backdrop-blur-sm border border-slate-200 rounded-xl shadow-lg text-sm text-slate-700 pointer-events-none transition-opacity duration-300")
             .style("opacity", 0);
 
         svg.append("rect").attr("width", width).attr("height", height).style("fill", "none").style("pointer-events", "all")
@@ -174,65 +278,51 @@ const KdePriceChart = ({ data = defaultData }) => {
             const timeVal = x.invert(pointerX);
             const priceVal = y.invert(pointerY);
             
-            const radius = 40;
+            const radius = 50;
             const nearbyPoints = dataset.filter(d => {
                 const dx = x(d.time) - pointerX;
                 const dy = y(d.price) - pointerY;
                 return dx * dx + dy * dy < radius * radius;
             });
 
-            let metricsHtml = `<div class="font-semibold text-slate-800 mb-2">Live Metrics</div>`;
-            metricsHtml += `<div class="grid grid-cols-[auto,1fr] gap-x-2 gap-y-1">
-                <span class="font-medium text-slate-500">Date:</span> <span class="text-right">${timeFormat(timeVal)}</span>
-                <span class="font-medium text-slate-500">Price:</span> <span class="text-right">$${priceVal.toFixed(4)}</span>
+            let metricsHtml = `<div class="font-semibold text-slate-800 mb-3">Live Analysis</div>`;
+            metricsHtml += `<div class="grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 text-xs">
+                <span class="font-medium text-slate-500">Cursor Date:</span> 
+                <span class="text-right font-mono">${timeFormat(timeVal)}</span>
+                <span class="font-medium text-slate-500">Cursor Price:</span> 
+                <span class="text-right font-mono">$${priceVal.toFixed(4)}</span>
             </div>`;
 
             if (nearbyPoints.length > 0) {
-                 metricsHtml += `<div class="border-t border-slate-200 my-2"></div>
+                const avgPrice = d3.mean(nearbyPoints, d => d.price);
+                const totalWeight = d3.sum(nearbyPoints, d => d.originalWeight);
+                const priceStd = d3.deviation(nearbyPoints, d => d.price);
+
+                metricsHtml += `<div class="border-t border-slate-200 my-3"></div>
                  <div class="font-semibold text-slate-800 mb-2">Nearby Bets (${nearbyPoints.length})</div>
-                 <div class="grid grid-cols-[auto,1fr] gap-x-2 gap-y-1">
-                    <span class="font-medium text-slate-500">Avg Price:</span> <span class="text-right">$${d3.mean(nearbyPoints, d => d.price).toFixed(4)}</span>
-                    <span class="font-medium text-slate-500">Avg Weight:</span> <span class="text-right">${d3.mean(nearbyPoints, d => d.originalWeight).toFixed(0)}</span>
+                 <div class="grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 text-xs">
+                    <span class="font-medium text-slate-500">Avg Price:</span> 
+                    <span class="text-right font-mono">$${avgPrice?.toFixed(4) || '0.0000'}</span>
+                    <span class="font-medium text-slate-500">Total Weight:</span> 
+                    <span class="text-right font-mono">${totalWeight?.toLocaleString() || '0'}</span>
+                    <span class="font-medium text-slate-500">Price Std Dev:</span> 
+                    <span class="text-right font-mono">$${priceStd?.toFixed(4) || '0.0000'}</span>
                  </div>`;
             }
             metricsPanel.html(metricsHtml);
         }
 
-    }, [data]); // Effect dependency on data prop
+    }, [data]);
 
     return (
-        <div className="w-full max-w-6xl mx-auto p-4 sm:p-6 bg-white/60 backdrop-blur-xl border border-slate-200/50 rounded-2xl shadow-xl">
+        <div className="w-full max-w-6xl mx-auto p-4 sm:p-6 bg-white/80 backdrop-blur-xl border border-slate-200/50 rounded-2xl shadow-xl">
             <div className="mb-4">
-                <h1 className="text-xl font-bold text-slate-800">Token Probability Distribution</h1>
-                <p className="text-sm text-slate-500">Aggregated price predictions with high-confidence zone ({'>'}75%)</p>
+                <h1 className="text-xl font-bold text-slate-800">Enhanced Token Probability Distribution</h1>
+                <p className="text-sm text-slate-500">Advanced KDE analysis with adaptive bandwidth and multi-level confidence contours</p>
             </div>
             <div ref={chartContainerRef} className="w-full h-[500px] relative" />
         </div>
     );
 };
-
-// --- HOW TO USE IN NEXT.JS ---
-// 1. Save this code as a component, e.g., `/components/KdePriceChart.js`
-// 2. In your Next.js page (e.g., `/app/page.js`), import the component and your data.
-/*
-import KdePriceChart from '@/components/KdePriceChart';
-
-const betData = [
-    // ... your new data array here ...
-];
-
-export default function HomePage() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 bg-slate-100">
-      <KdePriceChart data={betData} />
-    </main>
-  );
-}
-*/
-// 3. Make sure you have d3 installed in your project:
-//    npm install d3
-//    or
-//    yarn add d3
-// 4. Ensure you have Tailwind CSS configured in your Next.js project.
 
 export default KdePriceChart;
