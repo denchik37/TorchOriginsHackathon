@@ -1,95 +1,361 @@
-# Hedera Hardhat Example Project
+# 🔥 Torch Prediction Market - Smart Contracts
 
-This Hedera Hardhat Example Project offers boilerplate code for testing and deploying smart contracts via Hardhat. It includes configuration for both community-hosted and local ([Hedera Local Node](https://github.com/hashgraph/hedera-local-node)) instances of the [Hedera JSON RPC Relay](https://github.com/hashgraph/hedera-json-rpc-relay).
+> **A sophisticated prediction market for TORCH token built on Hedera Hashgraph using dual development frameworks**
 
-:fire: Check out the step-by-step tutorial [here](https://docs.hedera.com/hedera/tutorials/smart-contracts/deploy-a-smart-contract-using-hardhat-and-hedera-json-rpc-relays).
+[![Solidity](https://img.shields.io/badge/Solidity-0.8.0+-blue.svg)](https://soliditylang.org/)
+[![Hardhat](https://img.shields.io/badge/Hardhat-2.12.6-orange.svg)](https://hardhat.org/)
+[![Foundry](https://img.shields.io/badge/Foundry-Latest-red.svg)](https://getfoundry.sh/)
+[![Hedera](https://img.shields.io/badge/Hedera-Hashgraph-purple.svg)](https://hedera.com/)
+[![OpenZeppelin](https://img.shields.io/badge/OpenZeppelin-4.1.0-green.svg)](https://openzeppelin.com/)
 
-## Project Files and Folders
+## 🚀 Overview
 
-- `hardhat.config.js` - This is the configuration file for your Hardhat project development environment. It centralizes and defines various settings like Hedera networks, Solidity compiler versions, plugins, and tasks.
+This repository contains the smart contracts for a **quality-weighted prediction market** where users can bet on future TORCH token prices. Built with enterprise-grade security and optimized for the Hedera network.
 
-- `/contracts` - This folder holds all the Solidity smart contract files that make up the core logic of your dApp. Contracts are written in `.sol` files.
+## 🌐 Live Deployments
 
-- `/test` - This folder contains test scripts that help validate your smart contracts' functionality. These tests are crucial for ensuring that your contracts behave as expected.
-- `/scripts` - This folder contains essential JavaScript files for tasks such as deploying smart contracts to the Hedera network.
+### **🔥 Mainnet - Production Ready**
+> **Contract Address**: `0.0.9570085`  
+> **Total Bets**: **200+ bets placed**  
+> **Status**: ✅ **Live and Active**  
+> **View on HashScan**: [https://hashscan.io/mainnet/contract/0.0.9570085/calls?p=1&k=1754665751.622824115](https://hashscan.io/mainnet/contract/0.0.9570085/calls?p=1&k=1754665751.622824115)
 
-- `.env.example` - This file is contains the environment variables needed by the project. Copy this file to a `.env` file and fill in the actual values before starting the development server or deploying smart contracts. To expedite your test setup and deployment, some variables are pre-filled in this example file.
+### **🧪 Testnet - Extensive Testing**
+> **Contract Address**: `0.0.6363532`  
+> **Hedera Used**: **240+ HBAR** for comprehensive testing  
+> **Ethereum Address**: `0x8611e91d4d111fdc44b9a20f9249e18751c8f9bf`  
+> **Status**: ✅ **Thoroughly Tested**
 
-## Setup
+---
 
-1. Clone this repo to your local machine:
+### ✨ Key Features
 
-```shell
-git clone https://github.com/hashgraph/hedera-hardhat-example-project.git
+- **🎯 Quality-Based Weighting**: Bets are weighted based on prediction accuracy and time horizon
+- **⚡ Batch Processing**: Efficient handling of multiple bets with configurable batch sizes
+- **🛡️ Enterprise Security**: OpenZeppelin patterns (ReentrancyGuard, Ownable, Pausable)
+- **🔧 Dual Framework**: Development with both **Hardhat** and **Foundry**
+- **🌐 Hedera Integration**: Built for Hedera's enterprise-grade blockchain
+- **📊 Proven Track Record**: 200+ bets on mainnet, extensive testnet validation
+
+## 🛠️ Tech Stack
+
+### **Primary Framework: Hardhat**
+- **Hardhat** - Ethereum development environment
+- **Node.js** - JavaScript runtime
+- **ethers.js** - Ethereum library
+- **@openzeppelin/contracts** - Secure smart contract libraries
+
+### **Secondary Framework: Foundry**
+- **Foundry** - Rust-based Ethereum toolkit
+- **Forge** - Testing and deployment
+- **Cast** - Command-line interactions
+
+### **Blockchain: Hedera**
+- **Hedera Hashgraph** - Enterprise-grade DLT
+- **Hedera JSON-RPC Relay** - Network interaction
+- **HashScan** - Block explorer integration
+
+## 📁 Project Structure
+
+```
+smartContracts/
+├── 📄 contracts/                    # Solidity smart contracts
+│   ├── TorchPredictionMarket.sol   # Main prediction market contract
+│   ├── TestTorchPredictionMarket.sol # Test version with simplified logic
+│   ├── MockOracle.sol              # Mock price oracle for testing
+│   ├── ITorchPredictionMarket.sol  # Interface definitions
+│   └── Greeter.sol                 # Example contract
+├── 🛠️ scripts/                     # Hardhat deployment & interaction scripts
+│   ├── deployTorchPredictionMarket.js
+│   ├── placeBetWithoutValue.js
+│   ├── finalizeBet.js
+│   ├── claimBet.js
+│   └── ... (15+ scripts)
+├── 🧪 test/                        # Test files
+├── ⚙️ hardhat.config.js            # Hardhat configuration
+├── 📦 package.json                 # Node.js dependencies
+└── 🔧 Foundry/                     # Foundry development setup
+    ├── foundry.toml               # Foundry configuration
+    ├── src/                       # Foundry source files
+    └── script/                    # Foundry deployment scripts
 ```
 
-2. Once you've cloned the repository, open your IDE terminal and navigate to the root directory of the project:
+## 🚀 Quick Start
 
-```shell
-cd hedera-hardhat-example-project
-```
+### Prerequisites
+- Node.js (v16+)
+- npm or yarn
+- Git
 
-3. Run the following command to install all the necessary dependencies:
-
-```shell
+### 1. Clone & Install
+```bash
+git clone <your-repo-url>
+cd smartContracts
 npm install
 ```
 
-4. Get your Hedera testnet account hex encoded private key from the [Hedera Developer Portal](https://portal.hedera.com/register) and update the `.env.example` `TESTNET_OPERATOR_PRIVATE_KEY`
+### 2. Environment Setup
+```bash
+cp .env.example .env
+# Edit .env with your Hedera testnet credentials
+```
 
-5. Rename `.env.example` to `.env`
-
-6. Run the test script from the root directory of the project. The default network is set to "local."
-
-```shell
-# runs test on default network
+### 3. Run Tests
+```bash
+# Hardhat tests
 npx hardhat test
 
-# runs test on testnet
-npx hardhat test --network testnet
+# Foundry tests (if Foundry is installed)
+cd Foundry
+forge test
 ```
 
-Expect an output similar to the following:
+### 4. Deploy Contracts
+```bash
+# Deploy to testnet
+npx hardhat deploy-torch --network testnet
 
-```shell
-  RPC
-The address 0xe0b73F64b0de6032b193648c08899f20b5A6141D has 10000000000000000000000 weibars
-    ✔ should be able to get the account balance (1678ms)
-Greeter deployed to: 0xD9d0c5C0Ff85758BdF05A7636F8036d4D065F5B6
-    ✔ should be able to deploy a contract (11456ms)
-Contract call result: initial_msg
-    ✔ should be able to make a contract view call (1249ms)
-Updated call result: updated_msg
-Contract call result: updated_msg
-    ✔ should be able to make a contract call (6806ms)
-
-
-  4 passing (22s)
+# Deploy test version
+npx hardhat deploy-test-torch --network testnet
 ```
 
-7. Run the following command to deploy the smart contract.
+## 🎯 Core Contracts
 
-```shell
-# deploys to the default network
-npx hardhat deploy-contract
+### **TorchPredictionMarket.sol**
+The main prediction market contract featuring:
 
-# deploys to testnet
+- **Quality Weighting System**: Bets weighted by prediction sharpness and time horizon
+- **Batch Processing**: Efficient handling of multiple bets
+- **Security Patterns**: ReentrancyGuard, Ownable, Pausable
+- **Event System**: Comprehensive event logging for frontend integration
+
+### **Key Functions**
+```solidity
+// Place a bet on future TORCH price
+function placeBet(
+    uint256 targetTimestamp,
+    uint256 priceMin,
+    uint256 priceMax,
+    uint256 stake
+) external payable
+
+// Finalize a bet with actual price (owner only)
+function finalizeBet(uint256 betId, uint256 actualPrice) external
+
+// Claim winnings for finalized bets
+function claimBet(uint256 betId) external
+```
+
+## 🛠️ Development Scripts
+
+### **Deployment Scripts**
+```bash
+# Deploy main contract
+npx hardhat deploy-torch --network testnet
+
+# Deploy test version
+npx hardhat deploy-test-torch --network testnet
+
+# Deploy with custom parameters
 npx hardhat deploy-contract --network testnet
 ```
 
-# Contributing
+#### **Interaction Scripts**
+```bash
+# Place a bet
+npx hardhat place-bet --contract-address 0x... --target-timestamp 1234567890 --price-min 100 --price-max 200 --stake-amount 1000000000000000000
 
-Contributions are welcome. Please see the
-[contributing guide](https://github.com/hashgraph/.github/blob/main/CONTRIBUTING.md)
-to see how you can get involved.
+# Finalize a bet
+npx hardhat finalize-bet --contract-address 0x... --bet-id 1 --actual-price 150
 
-# Code of Conduct
+# Claim winnings
+npx hardhat claim-bet --contract-address 0x... --bet-id 1
 
-This project is governed by the
-[Contributor Covenant Code of Conduct](https://github.com/hashgraph/.github/blob/main/CODE_OF_CONDUCT.md). By
-participating, you are expected to uphold this code of conduct. Please report unacceptable behavior
-to [oss@hedera.com](mailto:oss@hedera.com).
+# Set bucket price (owner only)
+npx hardhat set-bucket-price --contract-address 0x... --bucket 1 --price 150
+```
 
-# License
+#### **Testing & Debug Scripts**
+```bash
+# Test contract interaction
+npx hardhat interact-test-torch --contract-address 0x...
 
-[Apache License 2.0](LICENSE)
+# Place 10 test bets with delays
+npx hardhat place-10-bets --contract-address 0x...
+
+# Debug betting process
+npx hardhat debug-place-10-bets --contract-address 0x...
+
+# Simple contract test
+npx hardhat simple-test --contract-address 0x...
+```
+
+#### **Utility Scripts**
+```bash
+# Show account balance
+npx hardhat show-balance
+
+# Make contract view call
+npx hardhat contract-view-call --contract-address 0x...
+
+# Make contract call
+npx hardhat contract-call --contract-address 0x... --msg "Hello World"
+```
+
+### **📁 Available Scripts**
+```
+scripts/
+├── 🚀 Deployment
+│   ├── deployTorchPredictionMarket.js
+│   ├── deployTestTorchPredictionMarket.js
+│   └── deployContract.js
+├── 🎯 Interaction
+│   ├── placeBetWithoutValue.js
+│   ├── finalizeBet.js
+│   ├── claimBet.js
+│   └── setBucketPrice.js
+├── 🧪 Testing
+│   ├── testPlaceBet.js
+│   ├── interactWithTestTorch.js
+│   ├── simpleTest.js
+│   └── debugPlace10Bets.js
+├── ⚡ Batch Operations
+│   ├── place10BetsWithDelay.js
+│   └── debugPlace10Bets.js
+└── 🔧 Utilities
+    ├── showBalance.js
+    ├── contractCall.js
+    └── contractViewCall.js
+```
+
+### **🔥 Foundry Recommendation**
+
+> **💡 Pro Tip**: For advanced smart contract interactions and gas optimization, we **recommend using Foundry scripts**. Foundry provides faster execution, better gas estimation, and more precise control over contract interactions.
+
+#### **Foundry Scripts Example**
+```bash
+cd Foundry
+
+# Deploy with Foundry
+forge script Deploy --rpc-url $RPC_URL --broadcast
+
+# Interact with contract
+cast call <contract-address> "nextBetId()" --rpc-url $RPC_URL
+
+# Send transaction
+cast send <contract-address> "placeBet(uint256,uint256,uint256,uint256)" \
+  --args 1234567890 100 200 1000000000000000000 \
+  --rpc-url $RPC_URL --private-key $PRIVATE_KEY
+```
+
+#### **Why Foundry for Interactions?**
+- **⚡ Faster Execution**: Rust-based performance
+- **🎯 Precise Gas Estimation**: Better gas optimization
+- **🔧 Lower Level Control**: Direct ABI interactions
+- **📊 Better Debugging**: Detailed transaction traces
+- **🛠️ Advanced Testing**: Fuzz testing and invariant testing
+
+## 🔧 Configuration
+
+### **Hardhat Configuration**
+```javascript
+// hardhat.config.js
+module.exports = {
+  solidity: "0.8.19",
+  networks: {
+    testnet: {
+      url: process.env.TESTNET_RPC_URL,
+      accounts: [process.env.TESTNET_OPERATOR_PRIVATE_KEY]
+    }
+  }
+}
+```
+
+### **Foundry Configuration**
+```toml
+# Foundry/foundry.toml
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+
+[rpc_endpoints]
+testnet = "${RPC_URL}"
+mainnet = "${MAINNET_RPC_URL}"
+```
+
+## 🧪 Testing
+
+### **Hardhat Tests**
+```bash
+# Run all tests
+npx hardhat test
+
+# Run specific test file
+npx hardhat test test/TorchPredictionMarket.test.js
+
+# Run with gas reporting
+REPORT_GAS=true npx hardhat test
+```
+
+### **Foundry Tests**
+```bash
+cd Foundry
+forge test
+forge test --gas-report
+```
+
+## 🌐 Network Integration
+
+### **Hedera Networks**
+- **Testnet**: `https://testnet.hashio.io/api`
+- **Mainnet**: `https://mainnet.hashio.io/api`
+
+### **HashScan Integration**
+- **Testnet**: https://hashscan.io/testnet
+- **Mainnet**: https://hashscan.io
+
+## 🔒 Security Features
+
+- **ReentrancyGuard**: Prevents reentrancy attacks
+- **Ownable**: Access control for admin functions
+- **Pausable**: Emergency pause functionality
+- **Input Validation**: Comprehensive parameter validation
+- **Gas Optimization**: Efficient batch processing
+
+## 📊 Contract Parameters
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `FEE_BPS` | 50 | 0.5% fee in basis points |
+| `MIN_STAKE` | 0.01 ether | Minimum bet amount |
+| `MAX_STAKE` | 100 ether | Maximum bet amount |
+| `MAX_DAYS_AHEAD` | 30 | Maximum days to bet ahead |
+| `BATCH_SIZE` | 50 | Bets processed per batch |
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+
+## 🔗 Links
+
+- [Hedera Documentation](https://docs.hedera.com/)
+- [Hardhat Documentation](https://hardhat.org/docs)
+- [Foundry Documentation](https://getfoundry.sh/)
+- [OpenZeppelin Contracts](https://openzeppelin.com/contracts/)
+- [HashScan Explorer](https://hashscan.io/)
+
+---
+
+<div align="center">
+  <p>Built with ❤️ for the Hedera ecosystem</p>
+  <p>🔥 <strong>Torch Prediction Market</strong> 🔥</p>
+</div>
