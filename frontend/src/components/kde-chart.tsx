@@ -15,7 +15,7 @@ interface KDEChartProps {
   enableZoom?: boolean;
   onZoomChange?: (transform: d3.ZoomTransform) => void;
   initialTransform?: d3.ZoomTransform;
-  showControls?: boolean; // New prop to control visibility of zoom controls
+  showControls?: boolean;
 }
 
 export interface KDEChartRef {
@@ -26,7 +26,7 @@ export interface KDEChartRef {
 
 const GET_BETS = gql`
   query {
-    bets(first: 1000, orderBy: timestamp, orderDirection: desc) {
+    bets(first: 100, orderBy: timestamp, orderDirection: desc) {
       targetTimestamp
       weight
       priceMin
@@ -36,13 +36,54 @@ const GET_BETS = gql`
   }
 `;
 
+// Enhanced KDE calculation with adaptive bandwidth
+function calculateAdaptiveBandwidth(data: any[], xScale: d3.ScaleTime<number, number>, yScale: d3.ScaleLinear<number, number>) {
+  const n = data.length;
+  if (n < 2) return 35; // Default bandwidth
+  
+  // Calculate local density for adaptive bandwidth
+  const localDensities = data.map((d, i) => {
+    const distances = data.map((other, j) => {
+      if (i === j) return Infinity;
+      const dx = xScale(d.time) - xScale(other.time);
+      const dy = yScale(d.price) - yScale(other.price);
+      return Math.sqrt(dx * dx + dy * dy);
+    });
+    return Math.min(...distances);
+  });
+  
+  // Use median of local densities for adaptive bandwidth
+  const medianDistance = d3.median(localDensities) || 35;
+  const adaptiveBandwidth = Math.max(20, Math.min(60, medianDistance * 0.8));
+  
+  return adaptiveBandwidth;
+}
+
+// Improved weight scaling function
+function calculateWeightScale(weights: number[]) {
+  const minWeight = Math.min(...weights);
+  const maxWeight = Math.max(...weights);
+  const medianWeight = d3.median(weights) || 0;
+  
+  // Use log scale for better distribution of weights
+  const logWeights = weights.map(w => Math.log(w + 1));
+  const logMin = Math.log(minWeight + 1);
+  const logMax = Math.log(maxWeight + 1);
+  
+  return weights.map(w => {
+    const logW = Math.log(w + 1);
+    // Normalize to 0-1 range with emphasis on higher weights
+    return Math.pow((logW - logMin) / (logMax - logMin), 0.7);
+  });
+}
+
 export const KDEChart = forwardRef<KDEChartRef, KDEChartProps>(({ 
   className, 
   currentPrice, 
   enableZoom = false, 
   onZoomChange,
   initialTransform,
-  showControls = true // Default to showing controls
+  showControls = true
 }, ref) => {
   const { data } = useQuery(GET_BETS);
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -106,7 +147,6 @@ export const KDEChart = forwardRef<KDEChartRef, KDEChartProps>(({
     }
   }, [isPanning, onZoomChange]);
 
-  // Expose zoom methods to parent component
   useImperativeHandle(ref, () => ({
     handleZoomIn,
     handleZoomOut,
@@ -120,7 +160,7 @@ export const KDEChart = forwardRef<KDEChartRef, KDEChartProps>(({
 
     const processData = (rawData: any[]) => {
       const now = new Date();
-      return rawData
+      const processed = rawData
         .map((d) => {
           const originalWeight = parseInt(d.weight);
           const minPrice = formatTinybarsToHbar(d.priceMin);
@@ -129,19 +169,30 @@ export const KDEChart = forwardRef<KDEChartRef, KDEChartProps>(({
           return {
             time: new Date(parseInt(d.targetTimestamp) * 1000),
             price: (Number(minPrice) + Number(maxPrice)) / 2,
-            stake: Math.sqrt(originalWeight), // Use square root to scale weights for better visualization
-            originalWeight: originalWeight // Keep original weight for tooltips
+            stake: originalWeight,
+            originalWeight: originalWeight,
+            priceRange: Number(maxPrice) - Number(minPrice)
           };
         })
-        .filter((d) => d.time > now); // Filter for future dates only
+        .filter((d) => d.time > now);
+
+      // Remove outliers using IQR method
+      const prices = processed.map(d => d.price);
+      const sortedPrices = prices.sort((a, b) => a - b);
+      const q1 = sortedPrices[Math.floor(sortedPrices.length * 0.25)];
+      const q3 = sortedPrices[Math.floor(sortedPrices.length * 0.75)];
+      const iqr = q3 - q1;
+      const lowerBound = q1 - 1.5 * iqr;
+      const upperBound = q3 + 1.5 * iqr;
+
+      return processed.filter(d => d.price >= lowerBound && d.price <= upperBound);
     };
 
     const dataset = processData(data.bets);
-    if (dataset.length === 0) return; // Don't render if no future data
+    if (dataset.length === 0) return;
 
     const container = chartContainerRef.current;
-    // Reduced margins for compact display
-    const margin = { top: 10, right: 20, bottom: 30, left: 40 };
+    const margin = { top: 15, right: 25, bottom: 35, left: 45 };
     const width = container.clientWidth - margin.left - margin.right;
     const height = container.clientHeight - margin.top - margin.bottom;
 
@@ -157,6 +208,7 @@ export const KDEChart = forwardRef<KDEChartRef, KDEChartProps>(({
 
     const defs = svg.append('defs');
 
+    // Enhanced clip path
     const clipId = `clip-${Math.random().toString(36).substr(2, 9)}`;
     defs.append('clipPath')
       .attr('id', clipId)
@@ -164,32 +216,52 @@ export const KDEChart = forwardRef<KDEChartRef, KDEChartProps>(({
       .attr('width', width)
       .attr('height', height);
 
+    // Enhanced glow filter
     const filterId = `glow-${Math.random().toString(36).substr(2, 9)}`;
     const filter = defs.append('filter').attr('id', filterId);
     filter.append('feGaussianBlur')
-      .attr('stdDeviation', '4.5')
+      .attr('stdDeviation', '3')
       .attr('result', 'coloredBlur');
     const feMerge = filter.append('feMerge');
     feMerge.append('feMergeNode').attr('in', 'coloredBlur');
     feMerge.append('feMergeNode').attr('in', 'SourceGraphic');
 
+    // Add gradient definitions for better color schemes
+    const gradientId = `gradient-${Math.random().toString(36).substr(2, 9)}`;
+    const gradient = defs.append('linearGradient')
+      .attr('id', gradientId)
+      .attr('gradientUnits', 'userSpaceOnUse')
+      .attr('x1', '0%')
+      .attr('y1', '100%')
+      .attr('x2', '0%')
+      .attr('y2', '0%');
+    
+    gradient.append('stop')
+      .attr('offset', '0%')
+      .attr('stop-color', 'rgba(59, 130, 246, 0.1)');
+    gradient.append('stop')
+      .attr('offset', '50%')
+      .attr('stop-color', 'rgba(59, 130, 246, 0.4)');
+    gradient.append('stop')
+      .attr('offset', '100%')
+      .attr('stop-color', 'rgba(59, 130, 246, 0.8)');
+
     const chartArea = svg.append('g').attr('clip-path', `url(#${clipId})`);
 
-    // Add more padding to the domain to "zoom out"
+    // Enhanced domain calculation with better padding
     const timeExtent = d3.extent(dataset, (d) => d.time);
     const priceExtent = d3.extent(dataset, (d) => d.price);
     const stakeExtent = d3.extent(dataset, (d) => d.stake);
 
-    // Check if extents are valid
     if (!timeExtent[0] || !timeExtent[1] || !priceExtent[0] || !priceExtent[1] || !stakeExtent[0] || !stakeExtent[1]) {
-      return; // Exit if we don't have valid data ranges
+      return;
     }
 
     const [minTime, maxTime] = timeExtent;
-    const timePadding = (maxTime.getTime() - minTime.getTime()) * 0.2; // 20% padding
+    const timePadding = (maxTime.getTime() - minTime.getTime()) * 0.15;
 
     const [minPrice, maxPrice] = priceExtent;
-    const pricePadding = (maxPrice - minPrice) * 0.2; // 20% padding
+    const pricePadding = (maxPrice - minPrice) * 0.15;
 
     const x = d3
       .scaleTime()
@@ -201,29 +273,28 @@ export const KDEChart = forwardRef<KDEChartRef, KDEChartProps>(({
       .domain([minPrice - pricePadding, maxPrice + pricePadding])
       .range([height, 0]);
 
+    // Enhanced opacity scale with better weight distribution
+    const weightScale = calculateWeightScale(dataset.map(d => d.stake));
     const opacityScale = d3.scaleLinear()
-      .domain([stakeExtent[0], stakeExtent[1]])
-      .range([0.4, 1.0]);
+      .domain([0, 1])
+      .range([0.3, 1.0]);
 
-    // Enhanced zoom functionality with better mouse interaction
+    // Enhanced zoom functionality
     if (enableZoom) {
       const zoom = d3.zoom()
-        .scaleExtent([0.1, 20]) // Increased max zoom for better exploration
+        .scaleExtent([0.1, 25])
         .translateExtent([[0, 0], [width, height]])
         .extent([[0, 0], [width, height]])
         .wheelDelta((event) => {
-          // Custom wheel delta for smoother zooming
-          return -event.deltaY * (event.deltaMode ? 120 : 1) / 500;
+          return -event.deltaY * (event.deltaMode ? 120 : 1) / 400;
         })
         .on('zoom', (event) => {
           const { transform } = event;
           setZoomTransform(transform);
           onZoomChange?.(transform);
           
-          // Apply zoom to chart elements
           chartArea.attr('transform', transform);
           
-          // Update axes
           (svg.select('.x-axis') as any).call(
             d3.axisBottom(x).scale(transform.rescaleX(x))
           );
@@ -231,7 +302,6 @@ export const KDEChart = forwardRef<KDEChartRef, KDEChartProps>(({
             d3.axisLeft(y).scale(transform.rescaleY(y))
           );
           
-          // Update grid
           (svg.select('.grid-x') as any).call(
             d3.axisBottom(x).scale(transform.rescaleX(x)).tickSize(-height).tickFormat(() => '')
           );
@@ -242,19 +312,17 @@ export const KDEChart = forwardRef<KDEChartRef, KDEChartProps>(({
 
       (svg as any).call(zoom);
       
-      // Apply initial transform if provided
       if (initialTransform) {
         (svg as any).call(zoom.transform, initialTransform);
       }
 
-      // Add double-click to reset zoom
-      svg.on('dblclick.zoom', null); // Remove default double-click behavior
+      svg.on('dblclick.zoom', null);
       svg.on('dblclick', () => {
         (svg as any).call(zoom.transform, d3.zoomIdentity);
       });
     }
 
-    // Simplified grid with dark theme colors
+    // Enhanced grid with better styling
     svg
       .append('g')
       .attr('class', 'axis grid-x')
@@ -267,7 +335,9 @@ export const KDEChart = forwardRef<KDEChartRef, KDEChartProps>(({
       )
       .selectAll('line')
       .attr('stroke', '#374151')
-      .attr('stroke-opacity', 0.3);
+      .attr('stroke-opacity', 0.2)
+      .attr('stroke-width', 0.5);
+    
     svg
       .append('g')
       .attr('class', 'axis grid-y')
@@ -279,9 +349,10 @@ export const KDEChart = forwardRef<KDEChartRef, KDEChartProps>(({
       )
       .selectAll('line')
       .attr('stroke', '#374151')
-      .attr('stroke-opacity', 0.3);
+      .attr('stroke-opacity', 0.2)
+      .attr('stroke-width', 0.5);
 
-    // Axes with dark theme styling
+    // Enhanced axes with better formatting
     svg
       .append('g')
       .attr('class', 'axis x-axis')
@@ -295,7 +366,9 @@ export const KDEChart = forwardRef<KDEChartRef, KDEChartProps>(({
       )
       .selectAll('text')
       .attr('fill', '#9CA3AF')
-      .attr('font-size', '10px');
+      .attr('font-size', '11px')
+      .attr('font-weight', '500');
+    
     svg
       .append('g')
       .attr('class', 'axis y-axis')
@@ -307,45 +380,60 @@ export const KDEChart = forwardRef<KDEChartRef, KDEChartProps>(({
       )
       .selectAll('text')
       .attr('fill', '#9CA3AF')
-      .attr('font-size', '10px');
+      .attr('font-size', '11px')
+      .attr('font-weight', '500');
 
-    // Smaller axis labels
+    // Enhanced axis labels
     svg
       .append('text')
       .attr('text-anchor', 'middle')
       .attr('x', width / 2)
-      .attr('y', height + margin.bottom - 5)
-      .text('Date')
+      .attr('y', height + margin.bottom - 8)
+      .text('Target Date')
       .attr('fill', '#9CA3AF')
-      .attr('font-size', '10px');
+      .attr('font-size', '12px')
+      .attr('font-weight', '600');
+    
     svg
       .append('text')
       .attr('text-anchor', 'middle')
       .attr('transform', 'rotate(-90)')
       .attr('x', -height / 2)
-      .attr('y', -margin.left + 15)
+      .attr('y', -margin.left + 18)
       .text('Price (USD)')
       .attr('fill', '#9CA3AF')
-      .attr('font-size', '10px');
+      .attr('font-size', '12px')
+      .attr('font-weight', '600');
 
-    // Use the density calculation logic from chart.js
+    // Enhanced KDE calculation with adaptive bandwidth
+    const adaptiveBandwidth = calculateAdaptiveBandwidth(dataset, x, y);
+    
     const densityData = d3
       .contourDensity()
       .x((d: any) => x(d.time))
       .y((d: any) => y(d.price))
       .size([width, height])
-      .bandwidth(35)
-      .weight((d: any) => d.stake)(dataset as any);
+      .bandwidth(adaptiveBandwidth)
+      .weight((d: any) => {
+        const index = dataset.indexOf(d);
+        return weightScale[index] || 0;
+      })(dataset as any);
 
-    // Use smoky blue interpolator from chart.js
+    // Enhanced color scheme with multiple levels
     const maxDensityValue = d3.max(densityData, (d) => d.value);
     if (!maxDensityValue) return;
     
-    const smokyBlueInterpolator = d3.interpolateRgb('rgba(71, 144, 202, 0.1)', '#4790ca');
-    const densityColor = d3.scaleSequential(smokyBlueInterpolator)
-      .domain([0, maxDensityValue]);
+    // Create multiple color scales for different density levels
+    const lowDensityColor = d3.scaleSequential(d3.interpolateRgb('rgba(59, 130, 246, 0.1)', 'rgba(59, 130, 246, 0.3)'))
+      .domain([0, maxDensityValue * 0.3]);
+    
+    const mediumDensityColor = d3.scaleSequential(d3.interpolateRgb('rgba(59, 130, 246, 0.3)', 'rgba(59, 130, 246, 0.6)'))
+      .domain([maxDensityValue * 0.3, maxDensityValue * 0.7]);
+    
+    const highDensityColor = d3.scaleSequential(d3.interpolateRgb('rgba(59, 130, 246, 0.6)', 'rgba(59, 130, 246, 0.9)'))
+      .domain([maxDensityValue * 0.7, maxDensityValue]);
 
-    // Add density visualization with filter effect
+    // Enhanced density visualization with multiple layers
     chartArea
       .append('g')
       .attr('filter', `url(#${filterId})`)
@@ -354,62 +442,90 @@ export const KDEChart = forwardRef<KDEChartRef, KDEChartProps>(({
       .enter()
       .append('path')
       .attr('d', d3.geoPath())
-      .attr('fill', (d) => densityColor(d.value))
-      .attr('fill-opacity', 0.9);
+      .attr('fill', (d) => {
+        if (d.value <= maxDensityValue * 0.3) return lowDensityColor(d.value);
+        if (d.value <= maxDensityValue * 0.7) return mediumDensityColor(d.value);
+        return highDensityColor(d.value);
+      })
+      .attr('fill-opacity', 0.95);
 
-    // Add confidence contours
-    const confidenceThreshold = maxDensityValue * 0.25;
-    const confidenceContours = densityData.filter((d) => d.value > confidenceThreshold);
-    chartArea
-      .append('g')
-      .selectAll('path.confidence')
-      .data(confidenceContours)
-      .enter()
-      .append('path')
-      .attr('d', d3.geoPath())
-      .attr('fill', 'rgb(16 185 129 / 0.4)')
-      .attr('stroke', 'rgb(5 150 105)')
-      .attr('stroke-linejoin', 'round')
-      .attr('stroke-width', 1);
+    // Enhanced confidence contours with multiple levels
+    const confidenceLevels = [0.25, 0.5, 0.75];
+    const contourColors = ['rgba(16, 185, 129, 0.3)', 'rgba(16, 185, 129, 0.5)', 'rgba(16, 185, 129, 0.7)'];
+    const contourStrokes = ['rgb(5, 150, 105)', 'rgb(4, 120, 87)', 'rgb(6, 95, 70)'];
 
-    // Enhanced tooltip for compact display
+    confidenceLevels.forEach((level, i) => {
+      const threshold = maxDensityValue * level;
+      const contours = densityData.filter((d) => d.value > threshold);
+      
+      chartArea
+        .append('g')
+        .selectAll(`path.confidence-${i}`)
+        .data(contours)
+        .enter()
+        .append('path')
+        .attr('d', d3.geoPath())
+        .attr('fill', contourColors[i])
+        .attr('stroke', contourStrokes[i])
+        .attr('stroke-linejoin', 'round')
+        .attr('stroke-width', 1.5)
+        .attr('stroke-opacity', 0.8);
+    });
+
+    // Enhanced tooltip
     const tooltip = d3
       .select(container)
       .append('div')
       .attr(
         'class',
-        'absolute z-10 p-2 text-xs text-white bg-neutral-800 rounded border border-neutral-700 pointer-events-none transition-opacity duration-200'
+        'absolute z-10 p-3 text-sm text-white bg-neutral-900/95 backdrop-blur-sm rounded-lg border border-neutral-700 shadow-xl pointer-events-none transition-opacity duration-200'
       )
       .style('opacity', 0);
 
-    // Make red markers more visible with enhanced styling from chart.js
+    // Enhanced bet markers with better styling
     chartArea
       .append('g')
-      .selectAll('line')
+      .selectAll('circle')
       .data(dataset)
       .enter()
-      .append('line')
-      .attr('x1', (d) => x(d.time))
-      .attr('y1', (d) => y(d.price - 0.0004))
-      .attr('x2', (d) => x(d.time))
-      .attr('y2', (d) => y(d.price + 0.0004))
-      .attr('stroke', '#f43f5e')
-      .attr('stroke-width', 2.5)
-      .attr('stroke-opacity', (d) => opacityScale(d.stake))
-      .attr('stroke-linecap', 'round')
+      .append('circle')
+      .attr('cx', (d) => x(d.time))
+      .attr('cy', (d) => y(d.price))
+      .attr('r', (d) => {
+        const index = dataset.indexOf(d);
+        return Math.max(2, Math.min(6, weightScale[index] * 4));
+      })
+      .attr('fill', '#ef4444')
+      .attr('stroke', '#dc2626')
+      .attr('stroke-width', 1)
+      .attr('opacity', (d) => {
+        const index = dataset.indexOf(d);
+        return opacityScale(weightScale[index]);
+      })
       .on('mouseover', (event, d) => {
-        const timeFormat = d3.timeFormat('%b %d, %Y');
+        const timeFormat = d3.timeFormat('%b %d, %Y at %I:%M %p');
+        const weightIndex = dataset.indexOf(d);
         tooltip
           .style('opacity', 1)
-          .html(
-            `Price: $${d.price.toFixed(4)}<br>Date: ${timeFormat(d.time)}<br>Weight: ${d.originalWeight.toFixed(0)}`
-          )
+          .html(`
+            <div class="font-semibold text-red-400 mb-2">Bet Details</div>
+            <div class="grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 text-xs">
+              <span class="font-medium text-neutral-400">Price:</span> 
+              <span class="text-right font-mono">$${d.price.toFixed(4)}</span>
+              <span class="font-medium text-neutral-400">Date:</span> 
+              <span class="text-right">${timeFormat(d.time)}</span>
+              <span class="font-medium text-neutral-400">Weight:</span> 
+              <span class="text-right font-mono">${d.originalWeight.toLocaleString()}</span>
+              <span class="font-medium text-neutral-400">Range:</span> 
+              <span class="text-right font-mono">±$${d.priceRange.toFixed(4)}</span>
+            </div>
+          `)
           .style('left', `${event.pageX + 15}px`)
           .style('top', `${event.pageY - 15}px`);
       })
       .on('mouseout', () => tooltip.style('opacity', 0));
 
-    // Simplified crosshair
+    // Enhanced crosshair
     const focus = svg.append('g').attr('class', 'focus').style('display', 'none');
     focus
       .append('line')
@@ -417,47 +533,48 @@ export const KDEChart = forwardRef<KDEChartRef, KDEChartProps>(({
       .attr('y1', 0)
       .attr('y2', height)
       .attr('stroke', '#94a3b8')
-      .attr('stroke-width', 0.5)
-      .attr('stroke-dasharray', '3,3');
+      .attr('stroke-width', 1)
+      .attr('stroke-dasharray', '4,4');
     focus
       .append('line')
       .attr('class', 'crosshair')
       .attr('x1', 0)
       .attr('x2', width)
       .attr('stroke', '#94a3b8')
-      .attr('stroke-width', 0.5)
-      .attr('stroke-dasharray', '3,3');
+      .attr('stroke-width', 1)
+      .attr('stroke-dasharray', '4,4');
 
-    // Compact metrics panel
+    // Enhanced metrics panel
     const metricsPanel = d3
       .select(container)
       .append('div')
       .attr(
         'class',
-        'absolute top-2 right-2 p-2 bg-neutral-800/90 backdrop-blur-sm border border-neutral-700 rounded text-xs text-neutral-300 pointer-events-none transition-opacity duration-300'
+        'absolute top-3 right-3 p-3 bg-neutral-900/95 backdrop-blur-sm border border-neutral-700 rounded-lg text-sm text-neutral-300 pointer-events-none transition-opacity duration-300 shadow-xl'
       )
       .style('opacity', 0);
 
-    // Add zoom info panel when zoom is enabled and controls are shown
+    // Enhanced zoom info panel
     if (enableZoom && showControls) {
       const zoomInfoPanel = d3
         .select(container)
         .append('div')
         .attr(
           'class',
-          'absolute top-2 left-2 p-2 bg-neutral-800/90 backdrop-blur-sm border border-neutral-700 rounded text-xs text-neutral-300'
+          'absolute top-3 left-3 p-3 bg-neutral-900/95 backdrop-blur-sm border border-neutral-700 rounded-lg text-sm text-neutral-300 shadow-xl'
         );
       
       zoomInfoPanel.html(`
-        <div class="font-semibold text-neutral-200 mb-1">Zoom Controls</div>
-        <div class="text-neutral-400 text-xs">
-          Scroll: Zoom in/out<br>
-          Drag: Pan around<br>
-          Double-click: Reset zoom
+        <div class="font-semibold text-neutral-200 mb-2">Interactive Controls</div>
+        <div class="text-neutral-400 text-xs space-y-1">
+          <div>🖱️ Scroll: Zoom in/out</div>
+          <div>🖱️ Drag: Pan around</div>
+          <div>🖱️ Double-click: Reset view</div>
         </div>
       `);
     }
 
+    // Enhanced mouse interaction
     svg
       .append('rect')
       .attr('width', width)
@@ -480,55 +597,63 @@ export const KDEChart = forwardRef<KDEChartRef, KDEChartProps>(({
       focus.select("line.crosshair[y1='0']").attr('x1', pointerX).attr('x2', pointerX);
       focus.select("line.crosshair[x1='0']").attr('y1', pointerY).attr('y2', pointerY);
 
-      // Get the current scales (accounting for zoom)
       const currentX = zoomTransform ? zoomTransform.rescaleX(x) : x;
       const currentY = zoomTransform ? zoomTransform.rescaleY(y) : y;
 
       const timeVal = currentX.invert(pointerX);
       const priceVal = currentY.invert(pointerY);
 
-      const radius = 40;
+      const radius = 50;
       const nearbyPoints = dataset.filter((d) => {
         const dx = currentX(d.time) - pointerX;
         const dy = currentY(d.price) - pointerY;
         return dx * dx + dy * dy < radius * radius;
       });
 
-      const timeFormat = d3.timeFormat('%b %d, %Y');
-      let metricsHtml = `<div class="font-semibold text-neutral-200 mb-2">Live Metrics</div>`;
-      metricsHtml += `<div class="grid grid-cols-[auto,1fr] gap-x-2 gap-y-1">
-        <span class="font-medium text-neutral-400">Date:</span> <span class="text-right">${timeFormat(timeVal)}</span>
-        <span class="font-medium text-neutral-400">Price:</span> <span class="text-right">$${priceVal.toFixed(4)}</span>
+      const timeFormat = d3.timeFormat('%b %d, %Y at %I:%M %p');
+      let metricsHtml = `<div class="font-semibold text-neutral-200 mb-3">Live Analysis</div>`;
+      metricsHtml += `<div class="grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 text-xs">
+        <span class="font-medium text-neutral-400">Cursor Date:</span> 
+        <span class="text-right font-mono">${timeFormat(timeVal)}</span>
+        <span class="font-medium text-neutral-400">Cursor Price:</span> 
+        <span class="text-right font-mono">$${priceVal.toFixed(4)}</span>
       </div>`;
 
       if (nearbyPoints.length > 0) {
         const avgPrice = d3.mean(nearbyPoints, (d) => d.price);
         const avgWeight = d3.mean(nearbyPoints, (d) => d.originalWeight);
+        const totalWeight = d3.sum(nearbyPoints, (d) => d.originalWeight);
+        const priceStd = d3.deviation(nearbyPoints, (d) => d.price);
 
-        metricsHtml += `<div class="border-t border-neutral-600 my-2"></div>
+        metricsHtml += `<div class="border-t border-neutral-600 my-3"></div>
          <div class="font-semibold text-neutral-200 mb-2">Nearby Bets (${nearbyPoints.length})</div>
-         <div class="grid grid-cols-[auto,1fr] gap-x-2 gap-y-1">
-            <span class="font-medium text-neutral-400">Avg Price:</span> <span class="text-right">$${avgPrice?.toFixed(4) || '0.0000'}</span>
-            <span class="font-medium text-neutral-400">Avg Weight:</span> <span class="text-right">${avgWeight?.toFixed(0) || '0'}</span>
+         <div class="grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 text-xs">
+            <span class="font-medium text-neutral-400">Avg Price:</span> 
+            <span class="text-right font-mono">$${avgPrice?.toFixed(4) || '0.0000'}</span>
+            <span class="font-medium text-neutral-400">Total Weight:</span> 
+            <span class="text-right font-mono">${totalWeight?.toLocaleString() || '0'}</span>
+            <span class="font-medium text-neutral-400">Price Std Dev:</span> 
+            <span class="text-right font-mono">$${priceStd?.toFixed(4) || '0.0000'}</span>
          </div>`;
       }
       metricsPanel.html(metricsHtml);
     }
-  }, [data, enableZoom, onZoomChange, initialTransform, zoomTransform, showControls]); // Effect dependency on data
+  }, [data, enableZoom, onZoomChange, initialTransform, zoomTransform, showControls]);
 
   return (
     <div className={cn('w-full', className)}>
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-xs text-neutral-400">Price prediction distribution by date</div>
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-sm text-neutral-400 font-medium">
+          Enhanced Price Prediction Distribution
+        </div>
         <div className="flex items-center gap-2">
-          {/* Only show zoom controls if enableZoom is true AND showControls is true */}
           {enableZoom && showControls && (
             <div className="flex items-center gap-1">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleZoomOut}
-                className="text-xs h-7 w-7 p-0 text-neutral-400 hover:text-neutral-200 border-neutral-600 hover:border-neutral-500"
+                className="text-xs h-8 w-8 p-0 text-neutral-400 hover:text-neutral-200 border-neutral-600 hover:border-neutral-500"
               >
                 <ZoomOut className="h-3 w-3" />
               </Button>
@@ -536,7 +661,7 @@ export const KDEChart = forwardRef<KDEChartRef, KDEChartProps>(({
                 variant="outline"
                 size="sm"
                 onClick={handleZoomIn}
-                className="text-xs h-7 w-7 p-0 text-neutral-400 hover:text-neutral-200 border-neutral-600 hover:border-neutral-500"
+                className="text-xs h-8 w-8 p-0 text-neutral-400 hover:text-neutral-200 border-neutral-600 hover:border-neutral-500"
               >
                 <ZoomIn className="h-3 w-3" />
               </Button>
@@ -544,7 +669,7 @@ export const KDEChart = forwardRef<KDEChartRef, KDEChartProps>(({
                 variant="outline"
                 size="sm"
                 onClick={handleResetZoom}
-                className="text-xs h-7 w-7 p-0 text-neutral-400 hover:text-neutral-200 border-neutral-600 hover:border-neutral-500"
+                className="text-xs h-8 w-8 p-0 text-neutral-400 hover:text-neutral-200 border-neutral-600 hover:border-neutral-500"
               >
                 <RotateCcw className="h-3 w-3" />
               </Button>
@@ -552,19 +677,18 @@ export const KDEChart = forwardRef<KDEChartRef, KDEChartProps>(({
                 variant={isPanning ? "default" : "outline"}
                 size="sm"
                 onClick={togglePan}
-                className="text-xs h-7 w-7 p-0 text-neutral-400 hover:text-neutral-200 border-neutral-600 hover:border-neutral-500"
+                className="text-xs h-8 w-8 p-0 text-neutral-400 hover:text-neutral-200 border-neutral-600 hover:border-neutral-500"
               >
                 <Move className="h-3 w-3" />
               </Button>
             </div>
           )}
-          {/* Only show expand button if showControls is true */}
           {showControls && (
             <Button
               variant="outline"
               size="sm"
               onClick={() => setIsModalOpen(true)}
-              className="text-xs h-7 px-2 text-neutral-400 hover:text-neutral-200 border-neutral-600 hover:border-neutral-500"
+              className="text-xs h-8 px-3 text-neutral-400 hover:text-neutral-200 border-neutral-600 hover:border-neutral-500"
             >
               <Maximize2 className="h-3 w-3 mr-1" />
               Expand
@@ -574,7 +698,6 @@ export const KDEChart = forwardRef<KDEChartRef, KDEChartProps>(({
       </div>
       <div ref={chartContainerRef} className="w-full h-full relative" />
 
-      {/* Only render modal if showControls is true */}
       {showControls && (
         <KDEChartModal
           currentPrice={currentPrice}
