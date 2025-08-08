@@ -39,18 +39,21 @@ export function KDEChart({ className, currentPrice, enableZoom = false }: KDECha
     }
 
     const processData = (rawData: any[]) => {
+      const now = new Date();
       return rawData
         .map((d) => {
+          const originalWeight = parseInt(d.weight);
           const minPrice = formatTinybarsToHbar(d.priceMin);
           const maxPrice = formatTinybarsToHbar(d.priceMax);
-
+          
           return {
-            time: new Date(d.targetTimestamp * 1000),
+            time: new Date(parseInt(d.targetTimestamp) * 1000),
             price: (Number(minPrice) + Number(maxPrice)) / 2,
-            stake: d.weight,
+            stake: Math.sqrt(originalWeight), // Use square root to scale weights for better visualization
+            originalWeight: originalWeight // Keep original weight for tooltips
           };
         })
-        .filter((d) => d.time > new Date()); // Filter for future dates only
+        .filter((d) => d.time > now); // Filter for future dates only
     };
 
     const dataset = processData(data.bets);
@@ -72,35 +75,45 @@ export function KDEChart({ className, currentPrice, enableZoom = false }: KDECha
       .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`);
 
+    const defs = svg.append('defs');
+
     const clipId = `clip-${Math.random().toString(36).substr(2, 9)}`;
-    svg
-      .append('defs')
-      .append('clipPath')
+    defs.append('clipPath')
       .attr('id', clipId)
       .append('rect')
       .attr('width', width)
       .attr('height', height);
 
+    const filterId = `glow-${Math.random().toString(36).substr(2, 9)}`;
+    const filter = defs.append('filter').attr('id', filterId);
+    filter.append('feGaussianBlur')
+      .attr('stdDeviation', '4.5')
+      .attr('result', 'coloredBlur');
+    const feMerge = filter.append('feMerge');
+    feMerge.append('feMergeNode').attr('in', 'coloredBlur');
+    feMerge.append('feMergeNode').attr('in', 'SourceGraphic');
+
     const chartArea = svg.append('g').attr('clip-path', `url(#${clipId})`);
 
     // Add more padding to the domain to "zoom out"
-    const timeExtent = d3.extent(dataset, (d) => d.time.getTime());
+    const timeExtent = d3.extent(dataset, (d) => d.time);
     const priceExtent = d3.extent(dataset, (d) => d.price);
+    const stakeExtent = d3.extent(dataset, (d) => d.stake);
 
     // Check if extents are valid
-    if (!timeExtent[0] || !timeExtent[1] || !priceExtent[0] || !priceExtent[1]) {
+    if (!timeExtent[0] || !timeExtent[1] || !priceExtent[0] || !priceExtent[1] || !stakeExtent[0] || !stakeExtent[1]) {
       return; // Exit if we don't have valid data ranges
     }
 
     const [minTime, maxTime] = timeExtent;
-    const timePadding = (maxTime - minTime) * 0.3; // 30% padding for more space
+    const timePadding = (maxTime.getTime() - minTime.getTime()) * 0.2; // 20% padding
 
     const [minPrice, maxPrice] = priceExtent;
-    const pricePadding = (maxPrice - minPrice) * 0.3; // 30% padding for more space
+    const pricePadding = (maxPrice - minPrice) * 0.2; // 20% padding
 
     const x = d3
       .scaleTime()
-      .domain([new Date(minTime - timePadding), new Date(maxTime + timePadding)])
+      .domain([new Date(minTime.getTime() - timePadding), new Date(maxTime.getTime() + timePadding)])
       .range([0, width]);
 
     const y = d3
@@ -108,184 +121,12 @@ export function KDEChart({ className, currentPrice, enableZoom = false }: KDECha
       .domain([minPrice - pricePadding, maxPrice + pricePadding])
       .range([height, 0]);
 
-    const stakeExtent = d3.extent(dataset, (d) => d.stake);
-    if (!stakeExtent[0] || !stakeExtent[1]) return;
-    const opacityScale = d3
-      .scaleLinear()
+    const opacityScale = d3.scaleLinear()
       .domain([stakeExtent[0], stakeExtent[1]])
-      .range([0.3, 1.0]);
+      .range([0.4, 1.0]);
 
-    // Add zoom behavior if enabled
-    if (enableZoom) {
-      const zoom = d3
-        .zoom()
-        .scaleExtent([0.5, 10]) // Allow zoom from 0.5x to 10x
-        .translateExtent([
-          [0, 0],
-          [width, height],
-        ])
-        .extent([
-          [0, 0],
-          [width, height],
-        ])
-        .on('zoom', (event) => {
-          const { transform } = event;
-
-          // Update scales with zoom transform
-          const xZoomed = transform.rescaleX(x);
-          const yZoomed = transform.rescaleY(y);
-
-          // Clear and redraw axes to avoid DOM manipulation issues
-          svg.selectAll('.axis').remove();
-
-          // Redraw grid lines
-          svg
-            .append('g')
-            .attr('class', 'axis grid-x')
-            .attr('transform', `translate(0,${height})`)
-            .call(
-              d3
-                .axisBottom(xZoomed)
-                .tickSize(-height)
-                .tickFormat(() => '') as any
-            )
-            .selectAll('line')
-            .attr('stroke', '#374151')
-            .attr('stroke-opacity', 0.3);
-
-          svg
-            .append('g')
-            .attr('class', 'axis grid-y')
-            .call(
-              d3
-                .axisLeft(yZoomed)
-                .tickSize(-width)
-                .tickFormat(() => '') as any
-            )
-            .selectAll('line')
-            .attr('stroke', '#374151')
-            .attr('stroke-opacity', 0.3);
-
-          // Redraw main axes
-          svg
-            .append('g')
-            .attr('class', 'axis x-axis')
-            .attr('transform', `translate(0,${height})`)
-            .call(
-              d3
-                .axisBottom(xZoomed)
-                .ticks(width / 80)
-                .tickFormat((d: any) => d3.timeFormat('%b %d')(d as Date))
-                .tickSizeOuter(0) as any
-            )
-            .selectAll('text')
-            .attr('fill', '#9CA3AF')
-            .attr('font-size', '10px');
-
-          svg
-            .append('g')
-            .attr('class', 'axis y-axis')
-            .call(
-              d3
-                .axisLeft(yZoomed)
-                .ticks(height / 40)
-                .tickFormat((d: any) => d3.format('$.3f')(d)) as any
-            )
-            .selectAll('text')
-            .attr('fill', '#9CA3AF')
-            .attr('font-size', '10px');
-
-          // Update density plot with new scales
-          const densityDataZoomed = d3
-            .contourDensity()
-            .x((d) => xZoomed(new Date(d[0])))
-            .y((d) => yZoomed(d[1]))
-            .size([width, height])
-            .bandwidth(25)
-            .weight((d: [number, number]) => {
-              const index = densityPoints.findIndex(
-                (point) => point[0] === d[0] && point[1] === d[1]
-              );
-              return index >= 0 ? dataset[index].stake : 1;
-            })(densityPoints);
-
-          // Update density visualization
-          chartArea.selectAll('path').remove();
-
-          // Re-add density layers with zoomed data
-          chartArea
-            .append('g')
-            .selectAll('path')
-            .data(densityDataZoomed)
-            .enter()
-            .append('path')
-            .attr('d', d3.geoPath())
-            .attr('fill', (d) => densityColor(d.value))
-            .attr('fill-opacity', 0.8)
-            .style('filter', 'drop-shadow(0 0 8px rgba(71, 144, 202, 0.6))');
-
-          chartArea
-            .append('g')
-            .selectAll('path')
-            .data(densityDataZoomed)
-            .enter()
-            .append('path')
-            .attr('d', d3.geoPath())
-            .attr('fill', (d) => densityColor(d.value))
-            .attr('fill-opacity', 0.3)
-            .style('filter', 'blur(4px)');
-
-          // Update confidence contours
-          const confidenceThreshold = (maxDensityValue || 0) * 0.25;
-          const confidenceContours = densityDataZoomed.filter((d) => d.value > confidenceThreshold);
-          chartArea
-            .append('g')
-            .selectAll('path.confidence')
-            .data(confidenceContours)
-            .enter()
-            .append('path')
-            .attr('class', 'confidence')
-            .attr('d', d3.geoPath())
-            .attr('fill', 'rgb(34 197 94 / 0.3)')
-            .attr('stroke', 'rgb(34 197 94)')
-            .attr('stroke-linejoin', 'round')
-            .attr('stroke-width', 0.5);
-
-          // Update red markers
-          chartArea.selectAll('line').remove();
-          chartArea
-            .append('g')
-            .selectAll('line')
-            .data(dataset)
-            .enter()
-            .append('line')
-            .attr('x1', (d) => xZoomed(d.time))
-            .attr('y1', (d) => yZoomed(d.price - 0.0003))
-            .attr('x2', (d) => xZoomed(d.time))
-            .attr('y2', (d) => yZoomed(d.price + 0.0003))
-            .attr('stroke', '#EF4444')
-            .attr('stroke-width', 2)
-            .attr('stroke-opacity', (d) => Math.max(0.6, opacityScale(d.stake)))
-            .style('filter', 'drop-shadow(0 0 3px rgba(239, 68, 68, 0.8))')
-            .on('mouseover', (event, d) => {
-              const dateStr = d.time.toLocaleDateString();
-              const timeStr = d.time.toLocaleTimeString();
-              tooltip
-                .style('opacity', 1)
-                .html(
-                  `Price: $${d.price.toFixed(4)}<br>Date: ${dateStr}<br>Time: ${timeStr}<br>Stake: ${d.stake.toFixed(0)}`
-                )
-                .style('left', `${event.pageX + 10}px`)
-                .style('top', `${event.pageY - 10}px`);
-            })
-            .on('mouseout', () => tooltip.style('opacity', 0));
-        });
-
-      // Apply zoom to the main SVG with proper type casting
-      d3.select(container)
-        .select('svg')
-        .call(zoom as any);
-    }
+    // Zoom functionality can be added back later if needed
+    // For now, we'll keep the chart simple and functional
 
     // Simplified grid with dark theme colors
     svg
@@ -361,65 +202,36 @@ export function KDEChart({ className, currentPrice, enableZoom = false }: KDECha
       .attr('fill', '#9CA3AF')
       .attr('font-size', '10px');
 
-    // Convert dataset to the format expected by contourDensity
-    const densityPoints = dataset.map((d) => [d.time.getTime(), d.price] as [number, number]);
+    // Use the density calculation logic from chart.js
     const densityData = d3
       .contourDensity()
-      .x((d) => x(new Date(d[0])))
-      .y((d) => y(d[1]))
+      .x((d) => x(d.time))
+      .y((d) => y(d.price))
       .size([width, height])
-      .bandwidth(25)
-      .weight((d: [number, number]) => {
-        const index = densityPoints.findIndex((point) => point[0] === d[0] && point[1] === d[1]);
-        return index >= 0 ? dataset[index].stake : 1;
-      })(densityPoints);
+      .bandwidth(35)
+      .weight((d) => d.stake)(dataset);
 
-    // Use blue color scheme for glowy, smoky effect with #4790ca variants
+    // Use smoky blue interpolator from chart.js
     const maxDensityValue = d3.max(densityData, (d) => d.value);
     if (!maxDensityValue) return;
+    
+    const smokyBlueInterpolator = d3.interpolateRgb('rgba(71, 144, 202, 0.1)', '#4790ca');
+    const densityColor = d3.scaleSequential(smokyBlueInterpolator)
+      .domain([0, maxDensityValue]);
 
-    // Create custom color interpolator using #4790ca variants
-    const customBlueInterpolator = (t: number) => {
-      // Start with a lighter variant of #4790ca and interpolate to the base color
-      const lightBlue = d3.color('#8BB8E8')!; // Lighter variant of #4790ca
-      const baseBlue = d3.color('#4790ca')!;
-      const darkBlue = d3.color('#2A5A8A')!; // Darker variant of #4790ca
-
-      if (t < 0.5) {
-        // Interpolate from light to base blue
-        return d3.interpolate(lightBlue, baseBlue)(t * 2);
-      } else {
-        // Interpolate from base to dark blue
-        return d3.interpolate(baseBlue, darkBlue)((t - 0.5) * 2);
-      }
-    };
-
-    const densityColor = d3.scaleSequential(customBlueInterpolator).domain([0, maxDensityValue]);
-
-    // Add glowy, smoky effect with multiple layers
+    // Add density visualization with filter effect
     chartArea
       .append('g')
+      .attr('filter', `url(#${filterId})`)
       .selectAll('path')
       .data(densityData)
       .enter()
       .append('path')
       .attr('d', d3.geoPath())
       .attr('fill', (d) => densityColor(d.value))
-      .attr('fill-opacity', 0.8)
-      .style('filter', 'drop-shadow(0 0 8px rgba(71, 144, 202, 0.6))');
+      .attr('fill-opacity', 0.9);
 
-    // Add additional smoky layer for depth
-    chartArea
-      .append('g')
-      .selectAll('path')
-      .data(densityData)
-      .enter()
-      .append('path')
-      .attr('d', d3.geoPath())
-      .attr('fill', (d) => densityColor(d.value))
-      .attr('fill-opacity', 0.3)
-      .style('filter', 'blur(4px)');
-
+    // Add confidence contours
     const confidenceThreshold = maxDensityValue * 0.25;
     const confidenceContours = densityData.filter((d) => d.value > confidenceThreshold);
     chartArea
@@ -429,10 +241,10 @@ export function KDEChart({ className, currentPrice, enableZoom = false }: KDECha
       .enter()
       .append('path')
       .attr('d', d3.geoPath())
-      .attr('fill', 'rgb(34 197 94 / 0.3)')
-      .attr('stroke', 'rgb(34 197 94)')
+      .attr('fill', 'rgb(16 185 129 / 0.4)')
+      .attr('stroke', 'rgb(5 150 105)')
       .attr('stroke-linejoin', 'round')
-      .attr('stroke-width', 0.5);
+      .attr('stroke-width', 1);
 
     // Enhanced tooltip for compact display
     const tooltip = d3
@@ -444,7 +256,7 @@ export function KDEChart({ className, currentPrice, enableZoom = false }: KDECha
       )
       .style('opacity', 0);
 
-    // Make red markers more visible with enhanced styling
+    // Make red markers more visible with enhanced styling from chart.js
     chartArea
       .append('g')
       .selectAll('line')
@@ -452,23 +264,22 @@ export function KDEChart({ className, currentPrice, enableZoom = false }: KDECha
       .enter()
       .append('line')
       .attr('x1', (d) => x(d.time))
-      .attr('y1', (d) => y(d.price - 0.0003)) // Slightly longer lines
+      .attr('y1', (d) => y(d.price - 0.0004))
       .attr('x2', (d) => x(d.time))
-      .attr('y2', (d) => y(d.price + 0.0003))
-      .attr('stroke', '#EF4444')
-      .attr('stroke-width', 2) // Thicker stroke
-      .attr('stroke-opacity', (d) => Math.max(0.6, opacityScale(d.stake))) // Minimum opacity
-      .style('filter', 'drop-shadow(0 0 3px rgba(239, 68, 68, 0.8))') // Red glow effect
+      .attr('y2', (d) => y(d.price + 0.0004))
+      .attr('stroke', '#f43f5e')
+      .attr('stroke-width', 2.5)
+      .attr('stroke-opacity', (d) => opacityScale(d.stake))
+      .attr('stroke-linecap', 'round')
       .on('mouseover', (event, d) => {
-        const dateStr = d.time.toLocaleDateString();
-        const timeStr = d.time.toLocaleTimeString();
+        const timeFormat = d3.timeFormat('%b %d, %Y');
         tooltip
           .style('opacity', 1)
           .html(
-            `Price: $${d.price.toFixed(4)}<br>Date: ${dateStr}<br>Time: ${timeStr}<br>Stake: ${d.stake.toFixed(0)}`
+            `Price: $${d.price.toFixed(4)}<br>Date: ${timeFormat(d.time)}<br>Weight: ${d.originalWeight.toFixed(0)}`
           )
-          .style('left', `${event.pageX + 10}px`)
-          .style('top', `${event.pageY - 10}px`);
+          .style('left', `${event.pageX + 15}px`)
+          .style('top', `${event.pageY - 15}px`);
       })
       .on('mouseout', () => tooltip.style('opacity', 0));
 
@@ -479,17 +290,17 @@ export function KDEChart({ className, currentPrice, enableZoom = false }: KDECha
       .attr('class', 'crosshair')
       .attr('y1', 0)
       .attr('y2', height)
-      .attr('stroke', '#6B7280')
+      .attr('stroke', '#94a3b8')
       .attr('stroke-width', 0.5)
-      .attr('stroke-dasharray', '2,2');
+      .attr('stroke-dasharray', '3,3');
     focus
       .append('line')
       .attr('class', 'crosshair')
       .attr('x1', 0)
       .attr('x2', width)
-      .attr('stroke', '#6B7280')
+      .attr('stroke', '#94a3b8')
       .attr('stroke-width', 0.5)
-      .attr('stroke-dasharray', '2,2');
+      .attr('stroke-dasharray', '3,3');
 
     // Compact metrics panel
     const metricsPanel = d3
@@ -526,29 +337,29 @@ export function KDEChart({ className, currentPrice, enableZoom = false }: KDECha
       const timeVal = x.invert(pointerX);
       const priceVal = y.invert(pointerY);
 
-      const radius = 30; // Smaller radius for compact display
+      const radius = 40;
       const nearbyPoints = dataset.filter((d) => {
         const dx = x(d.time) - pointerX;
         const dy = y(d.price) - pointerY;
         return dx * dx + dy * dy < radius * radius;
       });
 
+      const timeFormat = d3.timeFormat('%b %d, %Y');
       let metricsHtml = `<div class="font-semibold text-neutral-200 mb-2">Live Metrics</div>`;
       metricsHtml += `<div class="grid grid-cols-[auto,1fr] gap-x-2 gap-y-1">
-        <span class="font-medium text-neutral-400">Date:</span> <span class="text-right">${timeVal.toLocaleDateString()}</span>
-        <span class="font-medium text-neutral-400">Time:</span> <span class="text-right">${timeVal.toLocaleTimeString()}</span>
+        <span class="font-medium text-neutral-400">Date:</span> <span class="text-right">${timeFormat(timeVal)}</span>
         <span class="font-medium text-neutral-400">Price:</span> <span class="text-right">$${priceVal.toFixed(4)}</span>
       </div>`;
 
       if (nearbyPoints.length > 0) {
         const avgPrice = d3.mean(nearbyPoints, (d) => d.price);
-        const avgStake = d3.mean(nearbyPoints, (d) => d.stake);
+        const avgWeight = d3.mean(nearbyPoints, (d) => d.originalWeight);
 
         metricsHtml += `<div class="border-t border-neutral-600 my-2"></div>
          <div class="font-semibold text-neutral-200 mb-2">Nearby Bets (${nearbyPoints.length})</div>
          <div class="grid grid-cols-[auto,1fr] gap-x-2 gap-y-1">
             <span class="font-medium text-neutral-400">Avg Price:</span> <span class="text-right">$${avgPrice?.toFixed(4) || '0.0000'}</span>
-            <span class="font-medium text-neutral-400">Avg Stake:</span> <span class="text-right">${avgStake?.toFixed(0) || '0'}</span>
+            <span class="font-medium text-neutral-400">Avg Weight:</span> <span class="text-right">${avgWeight?.toFixed(0) || '0'}</span>
          </div>`;
       }
       metricsPanel.html(metricsHtml);
