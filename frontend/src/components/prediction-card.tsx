@@ -21,7 +21,12 @@ import { ContractId, TransactionReceipt } from '@hashgraph/sdk';
 import { ethers } from 'ethers';
 import { parseUnits } from 'ethers/lib/utils';
 
-import { useWallet, useBalance, useWriteContract } from '@buidlerlabs/hashgraph-react-wallets';
+import {
+  useWallet,
+  useBalance,
+  useWriteContract,
+  useWatchTransactionReceipt,
+} from '@buidlerlabs/hashgraph-react-wallets';
 
 import TorchPredictionMarketABI from '../../abi/TorchPredictionMarket.json';
 
@@ -61,6 +66,8 @@ function limitDecimals(value: number, decimals: number) {
 
 export function PredictionCard({ className }: PredictionCardProps) {
   const { writeContract } = useWriteContract();
+  const { watch } = useWatchTransactionReceipt();
+
   const { isConnected } = useWallet();
   const { data: balanceData } = useBalance({ autoFetch: isConnected });
   const balance = balanceData?.value?.toFixed(2) ?? 0;
@@ -75,7 +82,6 @@ export function PredictionCard({ className }: PredictionCardProps) {
   const [resolutionTime, setResolutionTime] = useState('15:00');
   const [isPlacingBet, setIsPlacingBet] = useState(false);
   const [isBetPlaced, setIsBetPlaced] = useState(false);
-  const [betId, setBetId] = useState<TransactionReceipt | null | string>(null);
   const [betError, setBetError] = useState<string | null>(null);
 
   const { startUnix, endUnix } = getTimestampRange(resolutionDate, resolutionTime);
@@ -133,9 +139,6 @@ export function PredictionCard({ className }: PredictionCardProps) {
       // Convert timestamp to string
       const targetTimestamp = startUnix.toString();
 
-      console.log(priceMin);
-      console.log(priceMax);
-
       const betId = await writeContract({
         contractId: ContractId.fromString('0.0.9570085'),
         abi: TorchPredictionMarketABI.abi,
@@ -147,18 +150,24 @@ export function PredictionCard({ className }: PredictionCardProps) {
         },
       });
 
-      if (betId) {
-        setBetId(betId);
-        setIsBetPlaced(true);
-      } else {
-        throw new Error('Failed to place bet - no bet ID returned');
-      }
+      watch(betId, {
+        onSuccess: (receipt) => {
+          setIsBetPlaced(true);
+          setIsPlacingBet(false);
+        },
+        onError: (receipt, error: { args: string[] }) => {
+          console.error('Transaction failed or timed out', error);
+          const message = error.args;
+          setIsPlacingBet(false);
+          setBetError(`Transaction failed or timed out: ${message}`);
+        },
+      });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to place bet';
+      setIsPlacingBet(false);
+
       setBetError(errorMessage);
       console.error('Bet placement error:', err);
-    } finally {
-      setIsPlacingBet(false);
     }
   };
 
@@ -174,7 +183,7 @@ export function PredictionCard({ className }: PredictionCardProps) {
 
   const closeBetPlacedModal = () => {
     setIsBetPlaced(false);
-    setBetId(null);
+
     // Reset form
     setDepositAmount('');
   };
