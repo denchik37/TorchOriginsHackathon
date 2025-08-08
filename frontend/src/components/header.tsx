@@ -14,8 +14,6 @@ import {
   Check,
   User,
 } from 'lucide-react';
-import { useWallet } from '@buidlerlabs/hashgraph-react-wallets';
-import { HashpackConnector } from '@buidlerlabs/hashgraph-react-wallets/connectors';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -26,8 +24,6 @@ import {
 import { Tooltip } from '@/components/ui/tooltip';
 
 import { formatAddress } from '@/lib/utils';
-import { useHbarPrice } from '@/hooks/useHbarPrice';
-import { HbarPriceDisplay } from '@/components/hbar-price-display';
 import { WalletSelector } from '@/components/wallet-selector';
 import { useMultiWallet } from '@/hooks/useMultiWallet';
 
@@ -82,13 +78,6 @@ export function Header() {
               My bets
             </Button>
           </Link>
-
-          <Button variant="ghost" size="sm">
-            <div className="flex flex-col items-start">
-              <span>Hedera</span>
-              <HbarPriceDisplay size="sm" showIcon={false} />
-            </div>
-          </Button>
 
           {currentWalletState.isConnected ? (
             <>
