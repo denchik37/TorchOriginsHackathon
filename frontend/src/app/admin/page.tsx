@@ -162,7 +162,7 @@ function AdminPage() {
                       <tr key={key} className="border-b border-white/5 hover:bg-dark-slate/50">
                         <td className="py-3 px-4">{formatTinybarsToHbar(bet.priceMin)}</td>
                         <td className="py-3 px-4 text-sm text-light-gray">
-                          {formatTinybarsToHbar(bet.priceMin)}
+                          {formatTinybarsToHbar(bet.priceMax)}
                         </td>
                         <td className="py-3 px-4 text-sm text-light-gray">
                           {formatDateUTC(bet.timestamp)}
