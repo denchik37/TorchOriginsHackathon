@@ -1,5 +1,5 @@
 'use client';
-
+import { useState, useEffect } from 'react';
 import { gql, useQuery } from '@apollo/client';
 
 import type { Bet } from '@/lib/types';
@@ -8,9 +8,10 @@ import { formatAddress, formatDateUTC, formatTinybarsToHbar } from '@/lib/utils'
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 
+const LIMIT = 10;
 const GET_BETS = gql`
-  query {
-    bets(first: 100, orderBy: timestamp, orderDirection: desc) {
+  query GetBets($first: Int!, $skip: Int!) {
+    bets(first: $first, skip: $skip, orderBy: timestamp, orderDirection: desc) {
       id
       user {
         id
@@ -28,7 +29,28 @@ interface BetHistoryProps {
 }
 
 export function BetHistory({ className }: BetHistoryProps) {
-  const { data, error, loading } = useQuery(GET_BETS);
+  const [page, setPage] = useState(1);
+  const [hasNext, setHasNext] = useState(true);
+
+  const skip = (page - 1) * LIMIT;
+  const { data, loading, error } = useQuery(GET_BETS, {
+    variables: { first: LIMIT, skip },
+    notifyOnNetworkStatusChange: true,
+  });
+
+  useEffect(() => {
+    if (!loading && data) {
+      setHasNext(data.bets.length === LIMIT);
+    }
+  }, [data, loading]);
+
+  const handlePrev = () => {
+    if (page > 1) setPage((p) => p - 1);
+  };
+
+  const handleNext = () => {
+    if (hasNext) setPage((p) => p + 1);
+  };
 
   return (
     <div className={className}>
@@ -93,16 +115,18 @@ export function BetHistory({ className }: BetHistoryProps) {
           variant="outline"
           size="sm"
           className="border-vibrant-purple text-vibrant-purple hover:bg-vibrant-purple hover:text-white"
+          disabled={page === 1}
+          onClick={handlePrev}
         >
           &lt; Prev
         </Button>
-
-        <span className="text-sm text-medium-gray">Page 1 of 5</span>
 
         <Button
           variant="outline"
           size="sm"
           className="border-vibrant-purple text-vibrant-purple hover:bg-vibrant-purple hover:text-white"
+          disabled={!hasNext}
+          onClick={handleNext}
         >
           Next &gt;
         </Button>
